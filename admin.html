@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>🌍 ECO RUSH — Admin Control Center</title>
+  <meta name="description" content="ECO RUSH Admin Control Center — Live Event Leaderboard & Game Monitoring Dashboard">
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- 1. ADMIN PIN SECURITY SCREEN -->
+    <section id="admin-pin-screen" class="pin-card glass-card">
+      <div class="pin-icon">🔐</div>
+      <h2>ADMIN ACCESS</h2>
+      <p class="text-muted" style="margin-bottom: 20px; font-size: 15px;">Enter the Event Admin PIN to unlock the live command dashboard.</p>
+      
+      <input id="admin-pin-input" class="form-input pin-input" type="password" placeholder="••••" maxlength="10" autofocus onkeydown="if(event.key==='Enter') verifyPin()">
+      <div id="pin-error" class="error-text"></div>
+      
+      <button class="btn-primary" type="button" onclick="verifyPin()" style="margin-top: 16px;">🔓 ENTER ADMIN</button>
+      <div style="margin-top: 14px;">
+        <a href="player.html" class="btn-secondary" style="font-size: 13px; padding: 6px 14px;">← Return to Player Mode</a>
+      </div>
+    </section>
+
+    <!-- 2. LIVE ADMIN DASHBOARD -->
+    <section id="admin-dashboard" class="hidden">
+      
+      <!-- Top Bar -->
+      <header class="admin-header">
+        <div class="admin-title-group">
+          <h1>🌍 ECO RUSH</h1>
+          <div class="sub-title">ADMIN CONTROL CENTER • LIVE EVENT DASHBOARD</div>
+        </div>
+        <div class="admin-actions">
+          <button id="btn-refresh" class="btn-refresh" type="button" onclick="manualRefresh()" title="Refresh Dashboard Data">
+            <span>🔄</span> REFRESH
+          </button>
+          <button class="btn-logout" type="button" onclick="logout()" title="Lock Admin Dashboard">
+            🔒 LOCK
+          </button>
+        </div>
+      </header>
+
+      <!-- Metrics Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon">👥</div>
+          <div class="metric-data">
+            <div class="metric-label">TOTAL PLAYERS</div>
+            <div class="metric-val" id="stat-players">0</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon">🏆</div>
+          <div class="metric-data">
+            <div class="metric-label">TOP SCORE</div>
+            <div class="metric-val" id="stat-top-score">0</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon">🎮</div>
+          <div class="metric-data">
+            <div class="metric-label">GAMES COMPLETED</div>
+            <div class="metric-val" id="stat-games">0</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon">🌱</div>
+          <div class="metric-data">
+            <div class="metric-label">STATUS</div>
+            <div class="metric-val status-live">
+              <span class="status-dot"></span>
+              <span id="stat-status">LIVE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Champion Spotlight -->
+      <div id="champion-card" class="champion-card"></div>
+
+      <!-- Live Leaderboard Panel -->
+      <div class="glass-card" style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h2>🏆 LIVE LEADERBOARD</h2>
+          <span class="text-muted" style="font-size: 13px;">Auto-synced in real-time</span>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="leaderboard-controls">
+          <div class="search-box">
+            <input id="admin-search" class="search-input" type="text" placeholder="🔎 Search player or team name...">
+          </div>
+
+          <div class="filter-group">
+            <button class="filter-btn active" type="button" onclick="setFilter('ALL', this)">ALL</button>
+            <button class="filter-btn" type="button" onclick="setFilter('ULTIMATE', this)">👑 ULTIMATE</button>
+            <button class="filter-btn" type="button" onclick="setFilter('PLANET', this)">🌍 PLANET</button>
+            <button class="filter-btn" type="button" onclick="setFilter('GREEN', this)">🌱 GREEN</button>
+            <button class="filter-btn" type="button" onclick="setFilter('EXPLORER', this)">🍃 EXPLORER</button>
+          </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div id="admin-scores"></div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

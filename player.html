@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>🌍 ECO RUSH — Player Game</title>
+  <meta name="description" content="Play ECO RUSH: Save the Planet, answer eco-challenges, build combos, and become the Ultimate Planet Protector!">
+  <link rel="stylesheet" href="css/shared.css">
+  <link rel="stylesheet" href="css/player.css">
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- 1. PLAYER HOME SCREEN -->
+    <section id="home-screen" class="screen-section">
+      <div class="center">
+        <h1>🌍 ECO RUSH</h1>
+        <div class="sub-title">🌱 SAVE THE PLANET • PLAY • LEARN • COMPETE</div>
+      </div>
+      
+      <div class="glass-card center">
+        <h2>👤 Player Registration</h2>
+        <input id="name" class="form-input" type="text" placeholder="Player Name" autocomplete="name" required>
+        <input id="team" class="form-input" type="text" placeholder="Team Name" required>
+        <input id="age" class="form-input" type="number" placeholder="Age" min="1" max="120" required>
+        <button class="btn-primary" type="button" onclick="startGame()">🚀 START ECO RUSH</button>
+      </div>
+
+      <div class="center">
+        <button class="btn-secondary" type="button" onclick="showLeaderboard()">🏆 VIEW LEADERBOARD</button>
+        <p class="text-muted" style="font-size: 13px; margin-top: 10px;">40 questions • 5 rounds • 20 seconds each</p>
+      </div>
+    </section>
+
+    <!-- 2. GAME SCREEN (HUD + QUESTION + TIMER) -->
+    <section id="game-screen" class="screen-section hidden">
+      <div class="player-hud">
+        <div class="hud-stats">
+          <div class="hud-title">🌍 ECO RUSH</div>
+          <div class="hud-badges">
+            <span class="hud-pill">⭐ <b id="score">0</b></span>
+            <span class="hud-pill">🔥 <b id="combo">0</b></span>
+          </div>
+        </div>
+        <div class="progress-container" aria-label="Game Progress">
+          <div class="progress-fill" id="bar"></div>
+        </div>
+      </div>
+
+      <div class="glass-card center">
+        <div id="round" class="round-indicator">ROUND 1/5</div>
+        <h2 id="roundName" class="round-name"></h2>
+        
+        <div class="q-counter" id="qnum">Question 1/8</div>
+        <h2 id="question" class="q-text"></h2>
+        
+        <div class="timer-container">⏱️ <span id="timer">20</span></div>
+        
+        <div id="options" class="options-grid"></div>
+      </div>
+    </section>
+
+    <!-- 3. RESULT SCREEN -->
+    <section id="result-screen" class="screen-section hidden">
+      <div class="glass-card center">
+        <h1 id="resultTitle" class="result-title"></h1>
+        <div id="resultMsg" class="result-msg-box"></div>
+        <div class="score-display">⭐ Total Score: <strong id="resultScore" style="color: var(--accent-gold);">0</strong></div>
+        <button class="btn-primary" type="button" onclick="nextQuestion()">🚀 CONTINUE</button>
+      </div>
+    </section>
+
+    <!-- 4. FINISH SCREEN -->
+    <section id="finish-screen" class="screen-section hidden">
+      <div class="glass-card center">
+        <div class="finish-hero">🎉🌍</div>
+        <h1>PLANET SAVED!</h1>
+        <h2 id="finalPlayer" style="color: var(--text-sub); margin-top: 6px;"></h2>
+        
+        <div class="sub-title" style="margin-top: 16px;">⭐ FINAL SCORE</div>
+        <div id="finalScore" class="final-score-val">0</div>
+        
+        <div class="final-badge-box">
+          <div class="badge-pill" id="badge"></div>
+        </div>
+        
+        <button class="btn-primary" type="button" onclick="showLeaderboard()">🏆 VIEW LEADERBOARD</button>
+        <button class="btn-secondary" type="button" onclick="home()" style="width: 100%; margin-top: 8px;">🏠 PLAY AGAIN</button>
+      </div>
+    </section>
+
+    <!-- 5. PLAYER LEADERBOARD VIEW -->
+    <section id="leaderboard-screen" class="screen-section hidden">
+      <div class="glass-card">
+        <h1 class="center" style="margin-bottom: 16px;">🏆 EVENT LEADERBOARD</h1>
+        <div id="scores"></div>
+        <button class="btn-secondary" type="button" onclick="home()" style="width: 100%; margin-top: 14px;">🏠 HOME</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="js/questions.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/player.js"></script>
+</body>
+</html>
