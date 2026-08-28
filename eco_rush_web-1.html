@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🌍 ECO RUSH</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,sans-serif;background:#10231b;color:white;min-height:100vh}
+.wrap{max-width:900px;margin:auto;padding:24px} .center{text-align:center}
+h1{font-size:clamp(38px,7vw,64px);margin:25px 0 5px} h2{font-size:28px}
+.sub{color:#bdecc8} .card{background:#193b2b;border-radius:22px;padding:28px;margin:25px auto;box-shadow:0 15px 40px #0005}
+input{display:block;width:min(430px,100%);margin:12px auto;padding:14px;border:0;border-radius:10px;font-size:16px}
+button{width:100%;padding:14px;margin:7px 0;border:0;border-radius:11px;background:#28784a;color:white;font-size:16px;font-weight:bold;cursor:pointer}
+button:hover{background:#3b9860} button:disabled{cursor:default;opacity:.75}
+.stats{display:flex;justify-content:space-between;color:#ffe9a6;font-weight:bold;font-size:18px}
+.timer{font-size:24px;color:#ffe9a6;text-align:center;margin:12px} .option{text-align:left}
+.correct{background:#237548!important} .wrong{background:#9a4b3d!important}
+.hidden{display:none} .small{color:#8fbca0;font-size:13px} .leader{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid #37624b;text-align:left}
+.badge{font-size:24px;margin:15px} .progress{height:8px;background:#28513d;border-radius:10px;overflow:hidden} .bar{height:100%;background:#72d38a;width:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section id="home">
+<div class="center"><h1>🌍 ECO RUSH</h1><div class="sub">🌱 SAVE THE PLANET • PLAY • LEARN • COMPETE</div></div>
+<div class="card center">
+<h2>👤 Player Registration</h2>
+<input id="name" placeholder="Name">
+<input id="team" placeholder="Team">
+<input id="age" type="number" placeholder="Age">
+<button onclick="startGame()">🚀 START ECO RUSH</button>
+</div>
+<div class="center"><button onclick="showLeaderboard()">🏆 LEADERBOARD</button><p class="small">40 questions • 5 rounds • 20 seconds each</p></div>
+</section>
+
+<section id="game" class="hidden">
+<div class="stats"><span>🌍 ECO RUSH</span><span>⭐ <b id="score">0</b> &nbsp; 🔥 <b id="combo">0</b></span></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="card center">
+<div id="round" class="sub"></div><h2 id="roundName"></h2>
+<div class="small" id="qnum"></div><h2 id="question"></h2>
+<div class="timer">⏱️ <span id="timer">20</span></div>
+<div id="options"></div>
+</div>
+</section>
+
+<section id="result" class="hidden">
+<div class="card center"><h1 id="resultTitle"></h1><p id="resultMsg"></p><h2>⭐ Total Score: <span id="resultScore"></span></h2><button onclick="nextQuestion()">🚀 CONTINUE</button></div>
+</section>
+
+<section id="finish" class="hidden">
+<div class="card center"><div style="font-size:60px">🎉🌍</div><h1>PLANET SAVED!</h1><h2 id="finalPlayer"></h2><div class="sub">⭐ FINAL SCORE</div><div style="font-size:48px;color:#ffe9a6" id="finalScore"></div><div class="badge" id="badge"></div>
+<button onclick="showLeaderboard()">🏆 LEADERBOARD</button><button onclick="home()">🏠 HOME</button></div>
+</section>
+
+<section id="leaderboard" class="hidden">
+<div class="card"><h1 class="center">🏆 LEADERBOARD</h1><div id="scores"></div><button onclick="home()">🏠 HOME</button></div>
+</section>
+</div>
+<script>
+const BANK={"♻️ WASTE WARRIOR": [["A banana peel belongs mainly in:", ["Wet/organic waste", "E-waste", "Glass waste", "Metal waste"], 0], ["Your old phone retires. What should you do?", ["Throw it with food waste", "Give it to an e-waste collection point", "Throw it into a river", "Burn it"], 1], ["Which is the eco-smart shopping choice?", ["Take a new plastic bag every time", "Carry a reusable bag", "Take five bags just in case", "Throw the bag away immediately"], 1], ["A clean glass bottle can often be:", ["Reused or recycled", "Thrown into a river", "Mixed with food waste", "Burned"], 0], ["Which is a sneaky waste problem?", ["Repairing things", "Throwing batteries into normal waste", "Reusing containers", "Buying only what you need"], 1], ["You have a cardboard box. Best option?", ["Reuse or recycle it", "Pour oil on it", "Throw it in a lake", "Burn it indoors"], 0], ["Which habit creates less waste?", ["Repair before replacing", "Replace everything immediately", "Buy unnecessary duplicates", "Throw reusable items away"], 0], ["TRICK QUESTION 😈 Recycling is:", ["The only environmental solution", "Useful, but reducing and reusing can come first", "A reason to buy unlimited things", "A way to make waste disappear"], 1]], "💧 WATER RESCUE": [["A tap is dripping all day. What should you do?", ["Ignore it", "Fix or report the leak", "Open another tap", "Decorate the tap"], 1], ["Rainwater harvesting means:", ["Collecting and storing rainwater", "Making rain fall", "Boiling rain", "Sending rain into drains"], 0], ["Which shower habit saves water?", ["Taking shorter showers", "Leaving the shower running", "Taking extra-long showers", "Running the shower for fun"], 0], ["Which can reduce garden water use?", ["Watering appropriately", "Flooding the garden", "Leaving a hose running", "Watering the road"], 0], ["Why should chemicals not be poured into drains?", ["They can pollute water", "They make rivers cleaner", "They create drinking water", "They help fish breathe"], 0], ["A river has lots of plastic. Best long-term solution?", ["Keep adding plastic", "Prevent litter and improve waste collection", "Move the plastic somewhere else", "Ignore it"], 1], ["Which is a simple water-saving habit?", ["Turn off the tap while brushing", "Keep the tap running", "Wash one spoon for 20 minutes", "Ignore leaks"], 0], ["The city's reservoir is low. Best plan?", ["Waste more water", "Fix leaks and reduce unnecessary use", "Pollute another lake", "Ignore the problem"], 1]], "🌳 FOREST GUARDIAN": [["Deforestation means:", ["Loss or removal of forests", "Planting flowers", "Cleaning beaches", "Recycling paper"], 0], ["Why are forests important?", ["They support ecosystems and biodiversity", "They create plastic", "They stop all rain", "They remove every pollutant"], 0], ["Which action helps wildlife?", ["Protecting habitats", "Destroying nesting areas", "Dumping waste in forests", "Taking wild animals home"], 0], ["A healthy tree is blocking your view. Best response?", ["Consider alternatives before cutting it", "Cut every tree", "Pour chemicals on it", "Burn it"], 0], ["Which saves paper?", ["Use both sides when practical", "Print everything twice", "Throw unused paper away", "Photocopy blank pages"], 0], ["Why isn't planting trees a magic solution?", ["Trees don't matter", "Existing forests and reducing pollution also matter", "Trees cause pollution", "Trees eliminate the need for clean energy"], 1], ["When a habitat is destroyed, who can be affected?", ["Local wildlife", "Only rocks", "Only buildings", "Nobody"], 0], ["A healthy forest contains:", ["Only one species", "Plants, animals, soil and water working together", "No insects", "Only trees"], 1]], "⚡ ENERGY BATTLE": [["Which is renewable energy?", ["Solar energy", "Coal", "Diesel", "Petrol"], 0], ["You leave a room for a long time. What should you do?", ["Turn off unnecessary lights", "Turn on more lights", "Leave everything running", "Open the refrigerator"], 0], ["For a short trip, which can reduce fuel use?", ["Walk or cycle when safe", "Drive around unnecessarily", "Leave the car idling", "Take a separate car every time"], 0], ["Why are LED bulbs useful?", ["They generally use less electricity", "They create coal", "They need no electricity", "They create sunlight"], 0], ["Energy efficiency means:", ["Getting the same useful result with less energy", "Wasting electricity", "Using energy for no reason", "Leaving everything switched on"], 0], ["A charger isn't being used. What is sensible?", ["Unplug or switch it off when appropriate", "Add more chargers", "Leave it running forever", "Put it in water"], 0], ["Which pair is renewable?", ["Wind and solar", "Coal and petrol", "Diesel and coal", "Petrol and gas"], 0], ["TRICK QUESTION 😈 Buying something new is:", ["Always greener", "Not necessarily; repair and reuse can be better", "Always pollution-free", "Always better than repairing"], 1]], "🚨 PLANET FINAL BATTLE": [["Your city has overflowing waste bins. Best solution?", ["Improve waste reduction, sorting and collection", "Move rubbish to a park", "Burn everything openly", "Throw it into a river"], 0], ["A school wants to save electricity. Best plan?", ["Efficient lights + switch-off habits", "Keep every light on", "Buy more extension cords", "Run fans in empty rooms"], 0], ["Which plan protects water?", ["Fix leaks and reduce waste", "Use water faster", "Dump waste into drains", "Ignore pollution"], 0], ["A forest project wants maximum benefit. Better approach?", ["Protect habitats and plant suitable trees", "Plant random trees everywhere", "Remove wildlife", "Replace forests with plastic trees"], 0], ["What is an environmental superpower?", ["One giant action once", "Consistent smart choices and teamwork", "Doing nothing", "Blaming everyone else"], 1], ["TRICKY 😈 If something is recyclable, can you throw it anywhere?", ["Yes", "No, proper collection and sorting still matter", "Only into rivers", "Only into food waste"], 1], ["Your team has 100 Eco Coins. Best investment?", ["Waste, water, habitat and energy improvements", "Disposable products", "A plastic statue", "A landfill in the playground"], 0], ["👑 FINAL BOSS: What can make the biggest difference?", ["The planet is someone else's problem", "Good choices + good systems + teamwork", "Recycling means we can waste anything", "Only one person can save Earth"], 1]]};
+const rounds=Object.keys(BANK);
+let player="",team="",age=0,ri=0,qi=0,score=0,combo=0,time=20,timer=null,locked=false;
+
+function hideAll(){document.querySelectorAll("section").forEach(x=>x.classList.add("hidden"))}
+function home(){clearInterval(timer);hideAll();document.getElementById("home").classList.remove("hidden")}
+function startGame(){
+ player=document.getElementById("name").value.trim(); team=document.getElementById("team").value.trim(); age=Number(document.getElementById("age").value);
+ if(!player||!team||!age||age<1||age>120){alert("Please enter your name, team and a valid age.");return}
+ ri=0;qi=0;score=0;combo=0;showQuestion();
+}
+function showQuestion(){
+ clearInterval(timer);locked=false;hideAll();document.getElementById("game").classList.remove("hidden");
+ const qs=BANK[rounds[ri]], q=qs[qi];
+ document.getElementById("score").textContent=score;document.getElementById("combo").textContent=combo;
+ document.getElementById("round").textContent=`ROUND ${ri+1}/5`;document.getElementById("roundName").textContent=rounds[ri];
+ document.getElementById("qnum").textContent=`Question ${qi+1}/8`;document.getElementById("question").textContent=q[0];
+ document.getElementById("bar").style.width=(`${(ri*8+qi)/40*100}%`);
+ const box=document.getElementById("options");box.innerHTML="";
+ q[1].forEach((o,i)=>{let b=document.createElement("button");b.className="option";b.textContent=String.fromCharCode(65+i)+". "+o;b.onclick=()=>answer(i,false);box.appendChild(b)});
+ time=20;document.getElementById("timer").textContent=time;
+ timer=setInterval(()=>{time--;document.getElementById("timer").textContent=time;if(time<=0)answer(-1,true)},1000);
+}
+function answer(a,timeout){
+ if(locked)return;locked=true;clearInterval(timer);
+ const q=BANK[rounds[ri]][qi], ok=a===q[2];let points=0;
+ if(ok){combo++;points=10+combo*2;score+=points}
+ else combo=0;
+ document.getElementById("resultTitle").textContent=ok?"✅ CORRECT!":(timeout?"⏰ TIME'S UP!":"❌ OOPS!");
+ document.getElementById("resultMsg").textContent=ok?`+${points} ⭐   🔥 Combo: ${combo}`:`The correct answer was: ${String.fromCharCode(65+q[2])}. ${q[1][q[2]]}`;
+ document.getElementById("resultScore").textContent=score;hideAll();document.getElementById("result").classList.remove("hidden");
+}
+function nextQuestion(){
+ qi++;
+ if(qi>=8){ri++;qi=0;combo=0}
+ if(ri>=5)finish();else showQuestion();
+}
+function finish(){
+ clearInterval(timer);let badge=score>=450?"👑 Ultimate Planet Protector":score>=350?"🌍 Planet Protector":score>=250?"🌱 Green Champion":"🍃 Eco Explorer";
+ let scores=JSON.parse(localStorage.getItem("ecoRushScores")||"[]");
+ scores.push({name:player,team,age,score,badge});scores.sort((a,b)=>b.score-a.score);localStorage.setItem("ecoRushScores",JSON.stringify(scores.slice(0,100)));
+ hideAll();document.getElementById("finish").classList.remove("hidden");document.getElementById("finalPlayer").textContent=`Congratulations, ${player}!`;document.getElementById("finalScore").textContent=score;document.getElementById("badge").textContent=badge;
+}
+function showLeaderboard(){
+ hideAll();document.getElementById("leaderboard").classList.remove("hidden");let s=JSON.parse(localStorage.getItem("ecoRushScores")||"[]");
+ if(!s.length){document.getElementById("scores").innerHTML='<p class="center">No scores yet!<br>Be the first Planet Protector 🌍</p>';return}
+ let rows=s.slice(0,20).map((x,i)=>`<tr><td>#${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.team)}</td><td>${x.score}</td><td>${esc(x.badge)}</td></tr>`).join("");
+ document.getElementById("scores").innerHTML=`<table class="leader"><tr><th>Rank</th><th>Player</th><th>Team</th><th>Score</th><th>Badge</th></tr>${rows}</table>`;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+</script>
+</body></html>
