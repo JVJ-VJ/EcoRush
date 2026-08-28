@@ -86,10 +86,13 @@ function broadcastLeaderboard() {
     type: "LEADERBOARD_UPDATE",
     timestamp: Date.now(),
     scores: scores.slice(0, 20),
+    allScores: scores,
     allScoresCount: scores.length,
     stats: stats,
     champion: stats.champion
   });
+
+  console.log(`[SERVER] Broadcasting leaderboard update: ${scores.length} scores to ${sseClients.size} SSE client(s)`);
 
   const message = `event: message\ndata: ${payload}\n\n`;
 
@@ -176,6 +179,8 @@ const server = http.createServer((req, res) => {
         const score = Number(data.score);
         const badge = String(data.badge || '').trim();
 
+        console.log(`[SERVER] Leaderboard submission received: Name="${name}", Team="${team}", Score=${score}, Badge="${badge}"`);
+
         if (!name || !team || isNaN(score)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'Invalid score submission payload' }));
@@ -196,6 +201,8 @@ const server = http.createServer((req, res) => {
         existingScores.push(newEntry);
         const updatedScores = writeScores(existingScores);
         const stats = calculateStats(updatedScores);
+
+        console.log(`[SERVER] Score saved: "${name}" (${score} pts) -> Total stored scores: ${updatedScores.length}`);
 
         // Immediate broadcast to all connected devices via SSE
         broadcastLeaderboard();
@@ -225,6 +232,7 @@ const server = http.createServer((req, res) => {
 
     res.write(': connected\n\n');
     sseClients.add(res);
+    console.log(`[SERVER] SSE client connected (Total active SSE clients: ${sseClients.size})`);
 
     // Send immediate initial snapshot
     const scores = readScores();
@@ -233,6 +241,7 @@ const server = http.createServer((req, res) => {
       type: "INITIAL_SNAPSHOT",
       timestamp: Date.now(),
       scores: scores.slice(0, 20),
+      allScores: scores,
       allScoresCount: scores.length,
       stats: stats,
       champion: stats.champion
@@ -241,6 +250,7 @@ const server = http.createServer((req, res) => {
 
     req.on('close', () => {
       sseClients.delete(res);
+      console.log(`[SERVER] SSE client disconnected (Remaining active SSE clients: ${sseClients.size})`);
     });
     return;
   }

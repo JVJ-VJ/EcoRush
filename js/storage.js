@@ -7,12 +7,22 @@
 const EcoStorage = (function() {
   const STORAGE_KEY = "ecoRushScores";
 
+  // Base URL resolution: use window.location.origin for http/https (supports LAN IP / Render / localhost),
+  // and fallback to http://localhost:3000 if opened directly via file:// or headless Node
+  function getApiUrl(path) {
+    if (typeof window !== "undefined" && window.location && window.location.origin && window.location.protocol.startsWith("http")) {
+      return window.location.origin + path;
+    }
+    return "http://localhost:3000" + path;
+  }
+
   /**
    * Fetch current leaderboard and stats from the central server
    */
   async function fetchLeaderboard() {
+    const url = getApiUrl("/api/leaderboard");
     try {
-      const res = await fetch("/api/leaderboard");
+      const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       
@@ -59,11 +69,13 @@ const EcoStorage = (function() {
       badge: String(entry.badge || "")
     };
 
-    // Save to local cache first
+    // Save to local cache
     saveScoreLocal(payload);
 
-    // Send to central server
-    const res = await fetch("/api/leaderboard", {
+    const url = getApiUrl("/api/leaderboard");
+    console.log(`[ECO RUSH] Submitting leaderboard result to ${url}:`, payload);
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -76,6 +88,7 @@ const EcoStorage = (function() {
     }
 
     const result = await res.json();
+    console.log("[ECO RUSH] Leaderboard submission response:", result);
     return result;
   }
 
@@ -90,14 +103,21 @@ const EcoStorage = (function() {
 
     let source = null;
     let reconnectTimeout = null;
+    const url = getApiUrl("/api/leaderboard/stream");
 
     function connect() {
       try {
-        source = new EventSource("/api/leaderboard/stream");
+        console.log(`[ADMIN] Connecting to SSE at ${url}...`);
+        source = new EventSource(url);
+
+        source.onopen = function() {
+          console.log("[ADMIN] SSE connected");
+        };
 
         source.onmessage = function(event) {
           try {
             const data = JSON.parse(event.data);
+            console.log("[ADMIN] Leaderboard update received:", data);
             if (typeof onUpdate === "function") {
               onUpdate(data);
             }
@@ -107,7 +127,7 @@ const EcoStorage = (function() {
         };
 
         source.onerror = function(err) {
-          console.warn("EcoStorage: SSE connection error, attempting reconnect in 3s...", err);
+          console.warn("[ADMIN] SSE connection error, attempting reconnect in 3s...", err);
           if (source) {
             source.close();
             source = null;

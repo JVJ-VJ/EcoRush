@@ -78,20 +78,25 @@
 
   async function loadInitialData() {
     try {
+      console.log("[ADMIN] Loading leaderboard...");
       const data = await EcoStorage.fetchLeaderboard();
       currentScores = data.allScores || data.scores || [];
       currentStats = data.stats || { totalGames: 0, uniquePlayers: 0, topScore: 0, status: "LIVE" };
       currentChampion = data.champion || null;
       renderAll();
     } catch (e) {
-      console.error("Failed to load initial admin data", e);
+      console.error("[ADMIN] Failed to load initial admin data:", e);
     }
   }
 
   function handleLiveUpdate(payload) {
     if (!payload) return;
 
-    if (payload.scores) {
+    console.log("[ADMIN] Leaderboard update received:", payload);
+
+    if (payload.allScores) {
+      currentScores = payload.allScores;
+    } else if (payload.scores) {
       currentScores = payload.scores;
     }
     if (payload.stats) {
@@ -171,21 +176,22 @@
       return;
     }
 
-    // Filter by Badge & Search Query
+    // Filter by Badge & Search Query safely
     let filtered = currentScores.filter(item => {
+      const badgeStr = String(item.badge || "");
       if (activeFilter === "ULTIMATE") {
-        if (!item.badge.includes("Ultimate Planet Protector")) return false;
+        if (!badgeStr.includes("Ultimate Planet Protector")) return false;
       } else if (activeFilter === "PLANET") {
-        if (!item.badge.includes("Planet Protector") || item.badge.includes("Ultimate")) return false;
+        if (!badgeStr.includes("Planet Protector") || badgeStr.includes("Ultimate")) return false;
       } else if (activeFilter === "GREEN") {
-        if (!item.badge.includes("Green Champion")) return false;
+        if (!badgeStr.includes("Green Champion")) return false;
       } else if (activeFilter === "EXPLORER") {
-        if (!item.badge.includes("Eco Explorer")) return false;
+        if (!badgeStr.includes("Eco Explorer")) return false;
       }
 
       if (searchQuery) {
-        const nameMatch = String(item.name).toLowerCase().includes(searchQuery);
-        const teamMatch = String(item.team).toLowerCase().includes(searchQuery);
+        const nameMatch = String(item.name || "").toLowerCase().includes(searchQuery);
+        const teamMatch = String(item.team || "").toLowerCase().includes(searchQuery);
         if (!nameMatch && !teamMatch) return false;
       }
 

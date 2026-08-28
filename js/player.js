@@ -181,6 +181,7 @@
     timer = null;
 
     const badge = EcoStorage.calculateBadge(score);
+    console.log(`[ECO RUSH] Final score: ${score}, Badge: ${badge}`);
 
     showScreen("finish-screen");
 
@@ -202,11 +203,12 @@
 
     const statusContainer = document.getElementById("submission-status");
     if (statusContainer) {
-      statusContainer.innerHTML = '<span class="status-loading">🔄 Saving score to live event leaderboard...</span>';
+      statusContainer.innerHTML = '<span class="status-loading">🔄 Submitting your score to live leaderboard...</span>';
     }
 
     try {
-      await EcoStorage.submitScore({
+      console.log("[ECO RUSH] Submitting leaderboard result...");
+      const response = await EcoStorage.submitScore({
         name: player,
         team: team,
         age: age,
@@ -214,20 +216,21 @@
         badge: badge
       });
 
+      console.log("[ECO RUSH] Leaderboard submission response:", response);
       isSubmitted = true;
       isSubmitting = false;
 
       if (statusContainer) {
-        statusContainer.innerHTML = '<span class="status-success">✅ Score Saved to Live Leaderboard!</span>';
+        statusContainer.innerHTML = '<span class="status-success">✅ SCORE SUBMITTED — Your score is now on the live leaderboard.</span>';
       }
     } catch (err) {
-      console.error("Score submission error:", err);
+      console.error("[ECO RUSH] Score submission error:", err);
       isSubmitting = false;
 
       if (statusContainer) {
         statusContainer.innerHTML = `
           <div class="status-error">
-            <p>⚠️ Unable to submit score. Please check your connection and try again.</p>
+            <p>❌ SCORE SUBMISSION FAILED. Please check your connection and try again.</p>
             <button class="btn-retry" type="button" onclick="window.retrySubmission()">🔄 Retry Submission</button>
           </div>
         `;
