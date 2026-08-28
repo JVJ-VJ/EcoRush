@@ -231,13 +231,13 @@ async function runEndToEnd() {
     player1Sandbox.window.startGame();
 
     // Answer questions to simulate realistic game
-    const bank = player1Sandbox.window.BANK;
     const rounds = player1Sandbox.window.rounds;
+    const activeBank1 = player1Sandbox.window._getActiveBank() || player1Sandbox.window.BANK;
 
     // Simulate answering all 40 questions correctly
     for (let r = 0; r < 5; r++) {
       for (let q = 0; q < 8; q++) {
-        const correctIndex = bank[rounds[r]][q][2];
+        const correctIndex = activeBank1[rounds[r]][q][2];
         player1Sandbox.window.answer(correctIndex, false);
         if (r < 4 || q < 7) {
           player1Sandbox.window.nextQuestion();
@@ -308,10 +308,12 @@ async function runEndToEnd() {
     player2Doc.getElementById('age').value = '24';
     player2Sandbox.window.startGame();
 
+    const activeBank2 = player2Sandbox.window._getActiveBank() || player2Sandbox.window.BANK;
+
     // Play 40 questions (all correct)
     for (let r = 0; r < 5; r++) {
       for (let q = 0; q < 8; q++) {
-        const correctIndex = bank[rounds[r]][q][2];
+        const correctIndex = activeBank2[rounds[r]][q][2];
         player2Sandbox.window.answer(correctIndex, false);
         if (r < 4 || q < 7) {
           player2Sandbox.window.nextQuestion();

@@ -272,17 +272,17 @@ async function runLiveProgressTests() {
 
     // 4. PLAYER A ANSWERS QUESTIONS (PROGRESS UPDATES)
     console.log("\n--- 4. Player A Answers Q1 to Q5 ---");
-    const bank = playerASandbox.window.BANK;
     const rounds = playerASandbox.window.rounds;
+    const activeBankA = playerASandbox.window._getActiveBank() || playerASandbox.window.BANK;
 
     // Player A answers Q1 to Q5
     for (let q = 0; q < 4; q++) {
-      const correctIndex = bank[rounds[0]][q][2];
+      const correctIndex = activeBankA[rounds[0]][q][2];
       playerASandbox.window.answer(correctIndex, false);
       playerASandbox.window.nextQuestion();
     }
     // Answer Q5
-    playerASandbox.window.answer(bank[rounds[0]][4][2], false);
+    playerASandbox.window.answer(activeBankA[rounds[0]][4][2], false);
 
     await new Promise(r => setTimeout(r, 400));
 
@@ -297,7 +297,7 @@ async function runLiveProgressTests() {
 
     // Finish remaining of Round 1
     for (let q = 5; q < 8; q++) {
-      const correctIndex = bank[rounds[0]][q][2];
+      const correctIndex = activeBankA[rounds[0]][q][2];
       playerASandbox.window.answer(correctIndex, false);
       playerASandbox.window.nextQuestion();
     }
@@ -305,7 +305,7 @@ async function runLiveProgressTests() {
     // Play Rounds 2 to 5
     for (let r = 1; r < 5; r++) {
       for (let q = 0; q < 8; q++) {
-        const correctIndex = bank[rounds[r]][q][2];
+        const correctIndex = activeBankA[rounds[r]][q][2];
         playerASandbox.window.answer(correctIndex, false);
         playerASandbox.window.nextQuestion();
       }
@@ -325,9 +325,10 @@ async function runLiveProgressTests() {
 
     // 6. PLAYER B FINISHES GAME
     console.log("\n--- 6. Player B Finishes Game ---");
+    const activeBankB = playerBSandbox.window._getActiveBank() || playerBSandbox.window.BANK;
     for (let r = 0; r < 5; r++) {
       for (let q = 0; q < 8; q++) {
-        const correctIndex = bank[rounds[r]][q][2];
+        const correctIndex = activeBankB[rounds[r]][q][2];
         playerBSandbox.window.answer(correctIndex, false);
         playerBSandbox.window.nextQuestion();
       }

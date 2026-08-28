@@ -1,6 +1,7 @@
 /**
  * ECO RUSH — Player Game Engine
  * Preserves 100% of the game logic, scoring, progression, timers, and question flow.
+ * Anti-Cheat: Generates a per-player randomized question order using Fisher-Yates shuffle once per game.
  * Reports real-time live player progress and submits final score to shared event backend.
  */
 
@@ -18,6 +19,34 @@
   let locked = false;
   let isSubmitting = false;
   let isSubmitted = false;
+  let activeBank = null;
+
+  /**
+   * Fisher-Yates shuffle algorithm (per-player randomization without modifying original BANK)
+   */
+  function shuffleQuestions(questions) {
+    if (!Array.isArray(questions)) return [];
+    const shuffled = [...questions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  function generateSessionBank() {
+    const sessionBank = {};
+    if (typeof BANK !== "undefined" && typeof rounds !== "undefined" && Array.isArray(rounds)) {
+      for (const r of rounds) {
+        if (BANK[r] && Array.isArray(BANK[r])) {
+          sessionBank[r] = shuffleQuestions(BANK[r]);
+        } else {
+          sessionBank[r] = [];
+        }
+      }
+    }
+    return sessionBank;
+  }
 
   function hideAllScreens() {
     document.querySelectorAll(".screen-section").forEach(el => el.classList.add("hidden"));
@@ -52,6 +81,7 @@
     locked = false;
     isSubmitting = false;
     isSubmitted = false;
+    activeBank = null;
     if (sessionId) {
       sendLiveProgress("LEFT");
       sessionId = "";
@@ -81,6 +111,9 @@
     isSubmitting = false;
     isSubmitted = false;
 
+    // Generate per-player randomized question order for this entire game session
+    activeBank = generateSessionBank();
+
     // Report active player session to live event monitoring
     sendLiveProgress("PLAYING");
 
@@ -93,7 +126,8 @@
     locked = false;
     showScreen("game-screen");
 
-    const qs = BANK[rounds[ri]];
+    const currentRoundName = rounds[ri];
+    const qs = (activeBank && activeBank[currentRoundName]) ? activeBank[currentRoundName] : BANK[currentRoundName];
     const q = qs[qi];
 
     const scoreEl = document.getElementById("score");
@@ -109,7 +143,7 @@
     if (scoreEl) scoreEl.textContent = score;
     if (comboEl) comboEl.textContent = combo;
     if (roundEl) roundEl.textContent = `ROUND ${ri + 1}/5`;
-    if (roundNameEl) roundNameEl.textContent = rounds[ri];
+    if (roundNameEl) roundNameEl.textContent = currentRoundName;
     if (qnumEl) qnumEl.textContent = `Question ${qi + 1}/8`;
     if (questionEl) questionEl.textContent = q[0];
     if (barEl) barEl.style.width = `${((ri * 8 + qi) / 40) * 100}%`;
@@ -155,7 +189,9 @@
     clearInterval(timer);
     timer = null;
 
-    const q = BANK[rounds[ri]][qi];
+    const currentRoundName = rounds[ri];
+    const qs = (activeBank && activeBank[currentRoundName]) ? activeBank[currentRoundName] : BANK[currentRoundName];
+    const q = qs[qi];
     const ok = a === q[2];
     let points = 0;
 
@@ -341,5 +377,6 @@
   window.home = home;
 
   // Export game state getters for tests
-  window._getPlayerState = () => ({ sessionId, player, team, age, ri, qi, score, combo, time, locked, isSubmitted });
+  window._getActiveBank = () => activeBank;
+  window._getPlayerState = () => ({ sessionId, player, team, age, ri, qi, score, combo, time, locked, isSubmitted, activeBank });
 })();

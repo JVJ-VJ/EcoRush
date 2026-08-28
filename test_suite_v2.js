@@ -203,23 +203,26 @@ assert(alertMsg === '', "Valid registration initiates game");
 assert(!docMock.getElementById('game-screen').classList.contains('hidden'), "Game screen is shown");
 
 // Test Scoring Sequence
-// Q1: Wet/organic waste (index 0)
-playerSandbox.answer(0, false);
+const activeBank = playerSandbox._getActiveBank() || newBank;
+
+// Q1: Correct
+playerSandbox.answer(activeBank[newRounds[0]][0][2], false);
 assert(docMock.getElementById('resultTitle').textContent === "✅ CORRECT!", "Q1 answer is ✅ CORRECT!");
 assert(docMock.getElementById('resultMsg').innerHTML.includes("+12 ⭐"), "Q1 awards +12 points");
 assert(docMock.getElementById('resultMsg').innerHTML.includes("Combo: 1"), "Q1 combo is 1");
 assert(docMock.getElementById('resultScore').textContent === 12, "Score is 12");
 
-// Q2: E-waste (index 1)
+// Q2: Correct
 playerSandbox.nextQuestion();
-playerSandbox.answer(1, false);
+playerSandbox.answer(activeBank[newRounds[0]][1][2], false);
 assert(docMock.getElementById('resultMsg').innerHTML.includes("+14 ⭐"), "Q2 awards +14 points");
 assert(docMock.getElementById('resultMsg').innerHTML.includes("Combo: 2"), "Q2 combo is 2");
 assert(docMock.getElementById('resultScore').textContent === 26, "Score is 26");
 
 // Q3: Wrong answer
 playerSandbox.nextQuestion();
-playerSandbox.answer(0, false); // Wrong
+const wrongIdx = (activeBank[newRounds[0]][2][2] + 1) % 4;
+playerSandbox.answer(wrongIdx, false); // Wrong
 assert(docMock.getElementById('resultTitle').textContent === "❌ OOPS!", "Wrong answer gives ❌ OOPS!");
 assert(docMock.getElementById('resultScore').textContent === 26, "Score unchanged on wrong answer (26)");
 
@@ -231,7 +234,7 @@ assert(docMock.getElementById('resultScore').textContent === 26, "Score unchange
 
 // Q5: Correct answer after reset
 playerSandbox.nextQuestion();
-playerSandbox.answer(newBank[newRounds[0]][4][2], false);
+playerSandbox.answer(activeBank[newRounds[0]][4][2], false);
 assert(docMock.getElementById('resultMsg').innerHTML.includes("+12 ⭐"), "Correct after reset starts back at +12 points");
 
 // 4. ADMIN DASHBOARD & LIVE FILTERING TESTS
