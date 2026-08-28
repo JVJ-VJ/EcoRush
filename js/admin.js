@@ -1,19 +1,21 @@
 /**
  * ECO RUSH — Admin Control Center & Live Event Dashboard
- * Features: PIN authentication, live metrics, champion spotlight, search, filter,
- * and automatic cross-tab synchronization with storage events.
+ * Connects to central backend with real-time Server-Sent Events (SSE) synchronization.
+ * Updates instantly when any player device submits a completed game.
  */
 
 (function() {
-  // Configurable Event Admin PIN
   const ADMIN_PIN = "1234";
 
   let isAuthenticated = false;
   let activeFilter = "ALL";
   let searchQuery = "";
+  let currentScores = [];
+  let currentStats = { totalGames: 0, uniquePlayers: 0, topScore: 0, status: "LIVE" };
+  let currentChampion = null;
+  let sseSubscription = null;
 
   function initAdmin() {
-    // Check if session has already authenticated
     if (sessionStorage.getItem("ecoRushAdminAuth") === "true") {
       isAuthenticated = true;
       showDashboard();
@@ -21,16 +23,7 @@
       showPinScreen();
     }
 
-    // Cross-tab live synchronization
-    window.addEventListener("storage", function(event) {
-      if (!event.key || event.key === EcoStorage.STORAGE_KEY) {
-        if (isAuthenticated) {
-          renderDashboard();
-        }
-      }
-    });
-
-    // Setup input listeners for search & filters
+    // Setup search input listener
     const searchInput = document.getElementById("admin-search");
     if (searchInput) {
       searchInput.addEventListener("input", function(e) {
@@ -68,15 +61,50 @@
     if (dashboardScreen) dashboardScreen.classList.add("hidden");
   }
 
-  function showDashboard() {
+  async function showDashboard() {
     const pinScreen = document.getElementById("admin-pin-screen");
     const dashboardScreen = document.getElementById("admin-dashboard");
     if (pinScreen) pinScreen.classList.add("hidden");
     if (dashboardScreen) dashboardScreen.classList.remove("hidden");
-    renderDashboard();
+
+    // 1. Initial REST API load
+    await loadInitialData();
+
+    // 2. Connect to live SSE real-time stream
+    if (!sseSubscription) {
+      sseSubscription = EcoStorage.subscribeLiveUpdates(handleLiveUpdate);
+    }
   }
 
-  function renderDashboard() {
+  async function loadInitialData() {
+    try {
+      const data = await EcoStorage.fetchLeaderboard();
+      currentScores = data.allScores || data.scores || [];
+      currentStats = data.stats || { totalGames: 0, uniquePlayers: 0, topScore: 0, status: "LIVE" };
+      currentChampion = data.champion || null;
+      renderAll();
+    } catch (e) {
+      console.error("Failed to load initial admin data", e);
+    }
+  }
+
+  function handleLiveUpdate(payload) {
+    if (!payload) return;
+
+    if (payload.scores) {
+      currentScores = payload.scores;
+    }
+    if (payload.stats) {
+      currentStats = payload.stats;
+    }
+    if (payload.champion !== undefined) {
+      currentChampion = payload.champion;
+    }
+
+    renderAll();
+  }
+
+  function renderAll() {
     if (!isAuthenticated) return;
     renderMetrics();
     renderChampion();
@@ -84,25 +112,22 @@
   }
 
   function renderMetrics() {
-    const stats = EcoStorage.getStats();
-
     const totalPlayersEl = document.getElementById("stat-players");
     const topScoreEl = document.getElementById("stat-top-score");
     const totalGamesEl = document.getElementById("stat-games");
     const statusEl = document.getElementById("stat-status");
 
-    if (totalPlayersEl) totalPlayersEl.textContent = stats.uniquePlayers;
-    if (topScoreEl) topScoreEl.textContent = stats.topScore;
-    if (totalGamesEl) totalGamesEl.textContent = stats.totalGames;
-    if (statusEl) statusEl.textContent = stats.status;
+    if (totalPlayersEl) totalPlayersEl.textContent = currentStats.uniquePlayers || 0;
+    if (topScoreEl) topScoreEl.textContent = currentStats.topScore || 0;
+    if (totalGamesEl) totalGamesEl.textContent = currentStats.totalGames || 0;
+    if (statusEl) statusEl.textContent = currentStats.status || "LIVE";
   }
 
   function renderChampion() {
-    const champ = EcoStorage.getChampion();
     const champContainer = document.getElementById("champion-card");
     if (!champContainer) return;
 
-    if (!champ) {
+    if (!currentChampion) {
       champContainer.innerHTML = `
         <div class="champion-empty">
           <div class="champ-icon">🏆</div>
@@ -120,12 +145,12 @@
         <div class="champ-crown">🥇</div>
         <div class="champ-info">
           <div class="champ-tag">CURRENT CHAMPION</div>
-          <h2 class="champ-name">${EcoStorage.esc(champ.name)}</h2>
-          <div class="champ-team">${EcoStorage.esc(champ.team)} &bull; Age ${champ.age || "N/A"}</div>
+          <h2 class="champ-name">${EcoStorage.esc(currentChampion.name)}</h2>
+          <div class="champ-team">${EcoStorage.esc(currentChampion.team)} &bull; Age ${currentChampion.age || "N/A"}</div>
         </div>
         <div class="champ-score-box">
-          <div class="champ-score-val">${Number(champ.score) || 0} <span class="star">⭐</span></div>
-          <div class="champ-badge-pill">${EcoStorage.esc(champ.badge)}</div>
+          <div class="champ-score-val">${Number(currentChampion.score) || 0} <span class="star">⭐</span></div>
+          <div class="champ-badge-pill">${EcoStorage.esc(currentChampion.badge)}</div>
         </div>
       </div>
     `;
@@ -135,9 +160,7 @@
     const scoresContainer = document.getElementById("admin-scores");
     if (!scoresContainer) return;
 
-    const allScores = EcoStorage.getScores();
-
-    if (!allScores.length) {
+    if (!currentScores.length) {
       scoresContainer.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🏆</div>
@@ -148,9 +171,8 @@
       return;
     }
 
-    // Apply Filter & Search
-    let filtered = allScores.filter(item => {
-      // Category Filter
+    // Filter by Badge & Search Query
+    let filtered = currentScores.filter(item => {
       if (activeFilter === "ULTIMATE") {
         if (!item.badge.includes("Ultimate Planet Protector")) return false;
       } else if (activeFilter === "PLANET") {
@@ -161,7 +183,6 @@
         if (!item.badge.includes("Eco Explorer")) return false;
       }
 
-      // Search Query
       if (searchQuery) {
         const nameMatch = String(item.name).toLowerCase().includes(searchQuery);
         const teamMatch = String(item.team).toLowerCase().includes(searchQuery);
@@ -180,13 +201,13 @@
       return;
     }
 
-    // Show top 20
+    // Render top 20
     const rows = filtered
       .slice(0, 20)
       .map((x, i) => {
-        let rankBadgeClass = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "";
+        let rankClass = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "";
         return `
-          <tr class="${rankBadgeClass}">
+          <tr class="${rankClass}">
             <td class="rank-cell"><span class="rank-tag">#${i + 1}</span></td>
             <td class="player-cell"><strong>${EcoStorage.esc(x.name)}</strong></td>
             <td class="team-cell">${EcoStorage.esc(x.team)}</td>
@@ -224,29 +245,31 @@
     renderLeaderboard();
   }
 
-  function manualRefresh() {
-    renderDashboard();
+  async function manualRefresh() {
     const btn = document.getElementById("btn-refresh");
+    if (btn) btn.classList.add("spin");
+    await loadInitialData();
     if (btn) {
-      btn.classList.add("spin");
-      setTimeout(() => btn.classList.remove("spin"), 600);
+      setTimeout(() => btn.classList.remove("spin"), 500);
     }
   }
 
   function logout() {
     isAuthenticated = false;
     sessionStorage.removeItem("ecoRushAdminAuth");
+    if (sseSubscription) {
+      sseSubscription.close();
+      sseSubscription = null;
+    }
     showPinScreen();
   }
 
-  // Expose to window for UI buttons
   window.verifyPin = verifyPin;
   window.setFilter = setFilter;
   window.manualRefresh = manualRefresh;
   window.logout = logout;
-  window.renderDashboard = renderDashboard;
+  window.renderDashboard = renderAll;
 
-  // Auto-init on DOMContentLoaded
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initAdmin);
   } else {

@@ -1,6 +1,7 @@
 /**
  * ECO RUSH — Player Game Engine
- * Preserves 100% of the game logic, scoring, progression, timers, and storage.
+ * Preserves 100% of the game logic, scoring, progression, timers, and question flow.
+ * Submits final score to the shared event backend upon completing all 40 questions.
  */
 
 (function() {
@@ -14,6 +15,8 @@
   let time = 20;
   let timer = null;
   let locked = false;
+  let isSubmitting = false;
+  let isSubmitted = false;
 
   function hideAllScreens() {
     document.querySelectorAll(".screen-section").forEach(el => el.classList.add("hidden"));
@@ -29,6 +32,8 @@
     clearInterval(timer);
     timer = null;
     locked = false;
+    isSubmitting = false;
+    isSubmitted = false;
     showScreen("home-screen");
   }
 
@@ -50,6 +55,8 @@
     qi = 0;
     score = 0;
     combo = 0;
+    isSubmitting = false;
+    isSubmitted = false;
     showQuestion();
   }
 
@@ -169,20 +176,11 @@
     }
   }
 
-  function finish() {
+  async function finish() {
     clearInterval(timer);
     timer = null;
 
     const badge = EcoStorage.calculateBadge(score);
-
-    // Save score using centralized EcoStorage
-    EcoStorage.saveScore({
-      name: player,
-      team: team,
-      age: age,
-      score: score,
-      badge: badge
-    });
 
     showScreen("finish-screen");
 
@@ -193,9 +191,56 @@
     if (finalPlayerEl) finalPlayerEl.textContent = `Congratulations, ${player}!`;
     if (finalScoreEl) finalScoreEl.textContent = score;
     if (badgeEl) badgeEl.textContent = badge;
+
+    // Trigger score submission to shared backend
+    await handleScoreSubmission(badge);
   }
 
-  function showLeaderboard() {
+  async function handleScoreSubmission(badge) {
+    if (isSubmitted || isSubmitting) return;
+    isSubmitting = true;
+
+    const statusContainer = document.getElementById("submission-status");
+    if (statusContainer) {
+      statusContainer.innerHTML = '<span class="status-loading">🔄 Saving score to live event leaderboard...</span>';
+    }
+
+    try {
+      await EcoStorage.submitScore({
+        name: player,
+        team: team,
+        age: age,
+        score: score,
+        badge: badge
+      });
+
+      isSubmitted = true;
+      isSubmitting = false;
+
+      if (statusContainer) {
+        statusContainer.innerHTML = '<span class="status-success">✅ Score Saved to Live Leaderboard!</span>';
+      }
+    } catch (err) {
+      console.error("Score submission error:", err);
+      isSubmitting = false;
+
+      if (statusContainer) {
+        statusContainer.innerHTML = `
+          <div class="status-error">
+            <p>⚠️ Unable to submit score. Please check your connection and try again.</p>
+            <button class="btn-retry" type="button" onclick="window.retrySubmission()">🔄 Retry Submission</button>
+          </div>
+        `;
+      }
+    }
+  }
+
+  async function retrySubmission() {
+    const badge = EcoStorage.calculateBadge(score);
+    await handleScoreSubmission(badge);
+  }
+
+  async function showLeaderboard() {
     clearInterval(timer);
     timer = null;
     showScreen("leaderboard-screen");
@@ -203,7 +248,10 @@
     const scoresContainer = document.getElementById("scores");
     if (!scoresContainer) return;
 
-    const s = EcoStorage.getScores();
+    scoresContainer.innerHTML = '<div class="center" style="padding: 20px;"><p class="text-muted">Loading live leaderboard...</p></div>';
+
+    const data = await EcoStorage.fetchLeaderboard();
+    const s = data.scores || [];
 
     if (!s.length) {
       scoresContainer.innerHTML = '<div class="empty-state"><p class="center">No scores yet!<br>Be the first Planet Protector 🌍</p></div>';
@@ -250,9 +298,10 @@
   window.answer = answer;
   window.nextQuestion = nextQuestion;
   window.finish = finish;
+  window.retrySubmission = retrySubmission;
   window.showLeaderboard = showLeaderboard;
   window.home = home;
 
   // Export game state getters for tests
-  window._getPlayerState = () => ({ player, team, age, ri, qi, score, combo, time, locked });
+  window._getPlayerState = () => ({ player, team, age, ri, qi, score, combo, time, locked, isSubmitted });
 })();

@@ -1,46 +1,91 @@
-# 🌍 ECO RUSH — Event Gaming & Live Leaderboard Platform
+# 🌍 ECO RUSH — Multi-Device Live Event Platform
 
-ECO RUSH is an interactive, event-ready environmental quiz game designed for live competitions, schools, workshops, and green hackathons.
+ECO RUSH is an interactive, event-ready environmental gaming and live leaderboard platform designed for live competitions, schools, workshops, and green hackathons.
 
----
-
-## 🚀 Quick Start
-
-Open either page directly in any modern browser:
-
-- **Player Experience**: Open [`player.html`](player.html) or [`index.html`](index.html)
-- **Admin Control Center**: Open [`admin.html`](admin.html)
-
-> Default Event Admin PIN: **`1234`** (or `eco2025`)
+It supports **multiple concurrent player devices (smartphones, tablets, laptops)** communicating in real-time with an **Admin Control Center** over local WiFi or a hosted server.
 
 ---
 
-## 📁 Architecture & File Layout
+## 🚀 Quick Start (Running the Event Server)
+
+### 1. Start the Central Backend Server
+From the project directory, run:
+
+```bash
+node server.js
+```
+
+The server will automatically detect your local WiFi / LAN IP address and display:
+
+```text
+======================================================
+   🌍 ECO RUSH EVENT SERVER IS LIVE & READY!         
+======================================================
+📡 Local Host:       http://localhost:3000
+📱 Player URL (LAN):  http://192.168.x.x:3000/player
+💻 Admin URL (LAN):   http://192.168.x.x:3000/admin
+------------------------------------------------------
+✨ All devices on the same WiFi network can connect!
+======================================================
+```
+
+### 2. Connect Player Devices
+- Have players open `http://<YOUR-LAN-IP>:3000/player` (or scan a QR code pointing to this URL) on their mobile phones or tablets.
+- They register their **Name**, **Team**, and **Age**, then complete the 40-question challenge.
+
+### 3. Open Admin Control Center
+- Open `http://<YOUR-LAN-IP>:3000/admin` (or `http://localhost:3000/admin` on the host laptop/projector).
+- Enter the Event Admin PIN: **`1234`** (or `eco2025`).
+- The live leaderboard will automatically receive real-time push updates via **Server-Sent Events (SSE)** whenever any player finishes a game on their device!
+
+---
+
+## 🏗️ Architecture Overview
+
+```text
+[ Player Phone 1 ] ──┐
+                     │ POST /api/leaderboard (Score Result)
+[ Player Phone 2 ] ──┼──────────────────────────────────► [ ECO RUSH SERVER ]
+                     │                                     (Node.js server.js)
+                     │ GET /api/leaderboard/stream                 │
+[ Admin Laptop ]   ──┴◄─────────────────────────────────           ▼
+                        (Real-time SSE Broadcast)           [ data/scores.json ]
+                                                            (Server Persistence)
+```
+
+---
+
+## 📁 File Structure
 
 ```text
 Eco Rush/
-├── player.html            # Dedicated player registration & 40-question gameplay
-├── admin.html             # Event control center & live syncing leaderboard
-├── index.html             # Unified launcher redirecting to player.html
+├── server.js              # Central Node.js HTTP + SSE server & static file host
+├── data/
+│   └── scores.json        # File-backed database (persists across server restarts)
+│
+├── player.html            # Player registration & 40-question gameplay
+├── admin.html             # Admin live event dashboard & leaderboard
+├── index.html             # Entry point launcher (routes to /player)
 │
 ├── css/
 │   ├── shared.css         # Typography, dark emerald palette & glassmorphism
-│   ├── player.css         # Player HUD, 20s glowing timer & gaming cards
-│   └── admin.css          # Metrics grid, champion banner & leaderboard table
+│   ├── player.css         # Gaming HUD, 20s glowing timer & answer cards
+│   └── admin.css          # Metrics grid, champion banner, search/filter & PIN screen
 │
 ├── js/
 │   ├── questions.js       # Exact 5-round, 40-question authoritative bank
-│   ├── storage.js         # Centralized localStorage API ("ecoRushScores")
-│   ├── player.js          # Player engine, timers, scoring & combo streak
-│   └── admin.js           # PIN authentication, live search, filters & sync
+│   ├── storage.js         # Centralized REST & SSE client synchronization
+│   ├── player.js          # Player state machine, 20s timers, locking & scoring
+│   └── admin.js           # PIN authentication, live SSE listener, search & filters
 │
-├── test_suite_v2.js       # Automated verification test suite
+├── test_multi_device.js   # Multi-device concurrent simulation test (31 passed)
+├── test_suite_v2.js       # Core game logic verification test (55 passed)
 └── README.md              # Documentation
 ```
 
 ---
 
-## 🎮 Game Rules & Progression
+## 🎮 Game Rules & Progression (100% Preserved)
 
 - **5 Rounds × 8 Questions = 40 Total Questions**:
   1. `♻️ WASTE WARRIOR`
@@ -63,9 +108,10 @@ Eco Rush/
 
 ## 🔐 Admin Control Center Features
 
-1. **Security Gate**: Protected by client-side event PIN (configured in `js/admin.js`).
-2. **Real-time Live Synchronization**: Admin dashboard automatically updates when players complete games in other browser tabs on the same origin via `window.addEventListener('storage', ...)`.
-3. **Event Metrics**: Real-time stats for Total Players, Top Score, Games Completed, and Live Status.
-4. **Current Champion Spotlight**: Instant recognition banner for the highest-scoring participant.
-5. **Search & Filter**: Search players/teams and filter by badge category dynamically without altering stored scores.
-6. **Persistence**: Scores saved under `ecoRushScores` (top 100 preserved, top 20 displayed).
+1. **Client-Side PIN Gate**: Configurable in `js/admin.js` (Default PIN: `1234`).
+2. **Real-time Live Synchronization**: Admin dashboard automatically updates when players complete games on other devices via Server-Sent Events (`GET /api/leaderboard/stream`).
+3. **Live Event Metrics**: Summary cards for **Total Players** (unique count), **Top Score**, **Games Completed**, and **Status** (`LIVE`).
+4. **Current Champion Spotlight**: Instant recognition card for the highest-scoring player.
+5. **Real-Time Search & Category Filters**: Search players/teams and filter by badge category dynamically without altering stored scores.
+6. **Robust Persistence**: Top 100 entries safely persisted to `data/scores.json` on disk, unaffected by server restarts.
+7. **Zero Fake Data**: Shows clean empty states when no scores exist yet (0 players, 0 games, null champion, no NaN).

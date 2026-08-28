@@ -255,13 +255,29 @@ const adminDocMock = {
  'stat-players', 'stat-top-score', 'stat-games', 'stat-status',
  'champion-card', 'admin-scores', 'admin-search', 'btn-refresh'].forEach(id => adminDocMock.getElementById(id));
 
+const mockFetch = async (url) => {
+  const scores = EcoStorage.getScoresLocal();
+  return {
+    ok: true,
+    json: async () => ({
+      success: true,
+      scores: scores.slice(0, 20),
+      allScores: scores,
+      stats: EcoStorage.getStatsLocal(),
+      champion: EcoStorage.getChampionLocal()
+    })
+  };
+};
+
 const adminSandbox = {
   window: {
-    addEventListener: () => {}
+    addEventListener: () => {},
+    fetch: mockFetch
   },
   document: adminDocMock,
   sessionStorage: mockStorage,
   EcoStorage: EcoStorage,
+  fetch: mockFetch,
   setTimeout: (fn) => fn()
 };
 adminSandbox.window.sessionStorage = mockStorage;
@@ -272,49 +288,52 @@ const adminCode = fs.readFileSync(path.join(__dirname, 'js/admin.js'), 'utf8');
 vm.createContext(adminSandbox);
 vm.runInContext(adminCode, adminSandbox);
 
-// Test PIN verification
-adminDocMock.getElementById('admin-pin-input').value = 'wrong_pin';
-adminSandbox.window.verifyPin();
-assert(adminDocMock.getElementById('pin-error').textContent.includes("Invalid"), "Blocks invalid PIN");
+(async function() {
+  // Test PIN verification
+  adminDocMock.getElementById('admin-pin-input').value = 'wrong_pin';
+  adminSandbox.window.verifyPin();
+  assert(adminDocMock.getElementById('pin-error').textContent.includes("Invalid"), "Blocks invalid PIN");
 
-adminDocMock.getElementById('admin-pin-input').value = '1234';
-adminSandbox.window.verifyPin();
-assert(adminDocMock.getElementById('pin-error').textContent === '', "Accepts valid PIN (1234)");
-assert(!adminDocMock.getElementById('admin-dashboard').classList.contains('hidden'), "Unlocks dashboard screen");
+  adminDocMock.getElementById('admin-pin-input').value = '1234';
+  adminSandbox.window.verifyPin();
+  assert(adminDocMock.getElementById('pin-error').textContent === '', "Accepts valid PIN (1234)");
+  assert(!adminDocMock.getElementById('admin-dashboard').classList.contains('hidden'), "Unlocks dashboard screen");
 
-// Verify Dashboard Stats Display
-assert(adminDocMock.getElementById('stat-players').textContent === 4, "Admin stats show 4 players");
-assert(adminDocMock.getElementById('stat-top-score').textContent === 470, "Admin stats show 470 top score");
-assert(adminDocMock.getElementById('stat-games').textContent === 4, "Admin stats show 4 games");
+  // Wait a microtask for async loadInitialData
+  await new Promise(r => setImmediate(r));
 
-// Verify Champion spotlight
-const champHtml = adminDocMock.getElementById('champion-card').innerHTML;
-assert(champHtml.includes("Alice"), "Champion card highlights Alice");
-assert(champHtml.includes("470"), "Champion card shows score 470");
-assert(champHtml.includes("👑 Ultimate Planet Protector"), "Champion card shows Ultimate badge");
+  // Verify Dashboard Stats Display
+  assert(adminDocMock.getElementById('stat-players').textContent === 4, "Admin stats show 4 players");
+  assert(adminDocMock.getElementById('stat-top-score').textContent === 470, "Admin stats show 470 top score");
+  assert(adminDocMock.getElementById('stat-games').textContent === 4, "Admin stats show 4 games");
 
-// Verify Table Rows
-const tableHtml = adminDocMock.getElementById('admin-scores').innerHTML;
-assert(tableHtml.includes("Alice") && tableHtml.includes("Bob") && tableHtml.includes("Charlie") && tableHtml.includes("Dana"), "Leaderboard lists all participants");
+  // Verify Champion spotlight
+  const champHtml = adminDocMock.getElementById('champion-card').innerHTML;
+  assert(champHtml.includes("Alice"), "Champion card highlights Alice");
+  assert(champHtml.includes("470"), "Champion card shows score 470");
+  assert(champHtml.includes("👑 Ultimate Planet Protector"), "Champion card shows Ultimate badge");
 
-// Test Search Filter Functionality
-adminDocMock.getElementById('admin-search').value = 'solar';
-// Dispatch simulated input
-adminSandbox.window.setFilter('ALL', null);
-// Re-render
-adminSandbox.window.renderDashboard();
-const searchResultHtml = adminDocMock.getElementById('admin-scores').innerHTML;
-assert(searchResultHtml.includes("Alice"), "Search 'solar' includes Solar Crew player");
+  // Verify Table Rows
+  const tableHtml = adminDocMock.getElementById('admin-scores').innerHTML;
+  assert(tableHtml.includes("Alice") && tableHtml.includes("Bob") && tableHtml.includes("Charlie") && tableHtml.includes("Dana"), "Leaderboard lists all participants");
 
-// 5. SECURITY & ESCAPING TEST
-console.log("\n--- 5. Security & Sanitization ---");
-const dangerousInput = `<script>alert('xss')</script>&"`;
-const safeOutput = EcoStorage.esc(dangerousInput);
-assert(!safeOutput.includes("<script>"), "HTML tags sanitized");
-assert(safeOutput === "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;&amp;&quot;", "Special characters sanitized exactly");
+  // Test Search Filter Functionality
+  adminDocMock.getElementById('admin-search').value = 'solar';
+  // Re-render
+  adminSandbox.window.renderDashboard();
+  const searchResultHtml = adminDocMock.getElementById('admin-scores').innerHTML;
+  assert(searchResultHtml.includes("Alice"), "Search 'solar' includes Solar Crew player");
 
-console.log("\n==================================================");
-console.log(`VERIFICATION SUMMARY: ${passed} PASSED, ${failed} FAILED`);
-console.log("==================================================");
+  // 5. SECURITY & ESCAPING TEST
+  console.log("\n--- 5. Security & Sanitization ---");
+  const dangerousInput = `<script>alert('xss')</script>&"`;
+  const safeOutput = EcoStorage.esc(dangerousInput);
+  assert(!safeOutput.includes("<script>"), "HTML tags sanitized");
+  assert(safeOutput === "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;&amp;&quot;", "Special characters sanitized exactly");
 
-if (failed > 0) process.exit(1);
+  console.log("\n==================================================");
+  console.log(`VERIFICATION SUMMARY: ${passed} PASSED, ${failed} FAILED`);
+  console.log("==================================================");
+
+  if (failed > 0) process.exit(1);
+})();

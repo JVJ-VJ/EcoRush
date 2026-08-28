@@ -1,70 +1,161 @@
 /**
- * ECO RUSH — Centralized Storage & Utility Module
- * Key: "ecoRushScores"
- * Preserves exact persistence, sorting, capping, and security rules.
+ * ECO RUSH — Client-Server Storage & Real-Time Sync Module
+ * Communicates with the central backend server (REST API + SSE Stream).
+ * Preserves exact badge formulas, sanitization, and fallback storage.
  */
 
 const EcoStorage = (function() {
   const STORAGE_KEY = "ecoRushScores";
 
-  function getScores() {
+  /**
+   * Fetch current leaderboard and stats from the central server
+   */
+  async function fetchLeaderboard() {
+    try {
+      const res = await fetch("/api/leaderboard");
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      
+      // Update local cache
+      if (data.allScores && Array.isArray(data.allScores)) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.allScores));
+        } catch (e) {}
+      }
+
+      return data;
+    } catch (e) {
+      console.warn("EcoStorage: Server unreachable, reading from local fallback", e);
+      const fallbackScores = getScoresLocal();
+      return {
+        success: false,
+        scores: fallbackScores.slice(0, 20),
+        allScores: fallbackScores,
+        stats: {
+          totalGames: fallbackScores.length,
+          uniquePlayers: new Set(fallbackScores.map(s => String(s.name).toLowerCase().trim())).size,
+          topScore: fallbackScores.length > 0 ? Math.max(...fallbackScores.map(s => Number(s.score) || 0)) : 0,
+          status: "OFFLINE",
+          champion: fallbackScores.length > 0 ? fallbackScores[0] : null
+        },
+        champion: fallbackScores.length > 0 ? fallbackScores[0] : null
+      };
+    }
+  }
+
+  /**
+   * Submit completed player score to the central server
+   */
+  async function submitScore(entry) {
+    if (!entry || typeof entry !== "object") {
+      throw new Error("Invalid score submission object");
+    }
+
+    const payload = {
+      name: String(entry.name || "").trim(),
+      team: String(entry.team || "").trim(),
+      age: Number(entry.age) || 0,
+      score: Number(entry.score) || 0,
+      badge: String(entry.badge || "")
+    };
+
+    // Save to local cache first
+    saveScoreLocal(payload);
+
+    // Send to central server
+    const res = await fetch("/api/leaderboard", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server returned status ${res.status}`);
+    }
+
+    const result = await res.json();
+    return result;
+  }
+
+  /**
+   * Subscribe to live SSE leaderboard updates across all connected devices
+   */
+  function subscribeLiveUpdates(onUpdate) {
+    if (typeof EventSource === "undefined") {
+      console.warn("EcoStorage: EventSource not supported in this browser");
+      return null;
+    }
+
+    let source = null;
+    let reconnectTimeout = null;
+
+    function connect() {
+      try {
+        source = new EventSource("/api/leaderboard/stream");
+
+        source.onmessage = function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (typeof onUpdate === "function") {
+              onUpdate(data);
+            }
+          } catch (e) {
+            console.error("EcoStorage: Failed to parse SSE message", e);
+          }
+        };
+
+        source.onerror = function(err) {
+          console.warn("EcoStorage: SSE connection error, attempting reconnect in 3s...", err);
+          if (source) {
+            source.close();
+            source = null;
+          }
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = setTimeout(connect, 3000);
+        };
+      } catch (e) {
+        console.error("EcoStorage: Failed to initialize EventSource", e);
+      }
+    }
+
+    connect();
+
+    return {
+      close: function() {
+        clearTimeout(reconnectTimeout);
+        if (source) source.close();
+      }
+    };
+  }
+
+  /**
+   * Local storage cache helpers (for offline / instant read)
+   */
+  function getScoresLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      console.error("EcoStorage: Failed to read scores from localStorage", e);
       return [];
     }
   }
 
-  function saveScore(entry) {
-    if (!entry || typeof entry !== "object") return [];
-    
-    let scores = getScores();
-    scores.push({
-      name: String(entry.name || "").trim(),
-      team: String(entry.team || "").trim(),
-      age: Number(entry.age) || 0,
-      score: Number(entry.score) || 0,
-      badge: String(entry.badge || "")
-    });
-
-    // Sort descending: highest score first
-    scores.sort((a, b) => b.score - a.score);
-
-    // Keep top 100
-    const top100 = scores.slice(0, 100);
-
+  function saveScoreLocal(entry) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(top100));
-    } catch (e) {
-      console.error("EcoStorage: Failed to save scores to localStorage", e);
-    }
-
-    return top100;
+      let scores = getScoresLocal();
+      scores.push(entry);
+      scores.sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(scores.slice(0, 100)));
+    } catch (e) {}
   }
 
-  function getStats() {
-    const scores = getScores();
-    const uniquePlayers = new Set(scores.map(s => String(s.name).toLowerCase().trim())).size;
-    const topScore = scores.length > 0 ? Math.max(...scores.map(s => Number(s.score) || 0)) : 0;
-
-    return {
-      totalGames: scores.length,
-      uniquePlayers: uniquePlayers,
-      topScore: topScore,
-      status: "LIVE"
-    };
-  }
-
-  function getChampion() {
-    const scores = getScores();
-    if (!scores.length) return null;
-    return scores[0];
-  }
-
+  /**
+   * Exact badge threshold calculation
+   */
   function calculateBadge(score) {
     const num = Number(score) || 0;
     return num >= 450
@@ -76,6 +167,9 @@ const EcoStorage = (function() {
       : "🍃 Eco Explorer";
   }
 
+  /**
+   * XSS sanitization
+   */
   function esc(s) {
     return String(s || "").replace(
       /[&<>"']/g,
@@ -90,12 +184,34 @@ const EcoStorage = (function() {
     );
   }
 
+  function getStatsLocal() {
+    const scores = getScoresLocal();
+    const uniquePlayers = new Set(scores.map(s => String(s.name).toLowerCase().trim())).size;
+    const topScore = scores.length > 0 ? Math.max(...scores.map(s => Number(s.score) || 0)) : 0;
+    return {
+      totalGames: scores.length,
+      uniquePlayers: uniquePlayers,
+      topScore: topScore,
+      status: "LIVE"
+    };
+  }
+
+  function getChampionLocal() {
+    const scores = getScoresLocal();
+    return scores.length > 0 ? scores[0] : null;
+  }
+
   return {
     STORAGE_KEY,
-    getScores,
-    saveScore,
-    getStats,
-    getChampion,
+    fetchLeaderboard,
+    submitScore,
+    subscribeLiveUpdates,
+    getScoresLocal,
+    getScores: getScoresLocal,
+    saveScoreLocal,
+    saveScore: saveScoreLocal,
+    getStats: getStatsLocal,
+    getChampion: getChampionLocal,
     calculateBadge,
     esc
   };
