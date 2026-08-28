@@ -268,6 +268,7 @@ const mockFetch = async (url) => {
     })
   };
 };
+global.fetch = mockFetch;
 
 const adminSandbox = {
   window: {
@@ -299,13 +300,13 @@ vm.runInContext(adminCode, adminSandbox);
   assert(adminDocMock.getElementById('pin-error').textContent === '', "Accepts valid PIN (1234)");
   assert(!adminDocMock.getElementById('admin-dashboard').classList.contains('hidden'), "Unlocks dashboard screen");
 
-  // Wait a microtask for async loadInitialData
-  await new Promise(r => setImmediate(r));
+  // Wait for async loadInitialData
+  await new Promise(r => setTimeout(r, 50));
 
   // Verify Dashboard Stats Display
-  assert(adminDocMock.getElementById('stat-players').textContent === 4, "Admin stats show 4 players");
-  assert(adminDocMock.getElementById('stat-top-score').textContent === 470, "Admin stats show 470 top score");
-  assert(adminDocMock.getElementById('stat-games').textContent === 4, "Admin stats show 4 games");
+  assert(Number(adminDocMock.getElementById('stat-players').textContent) === 4, "Admin stats show 4 players");
+  assert(Number(adminDocMock.getElementById('stat-top-score').textContent) === 470, "Admin stats show 470 top score");
+  assert(Number(adminDocMock.getElementById('stat-games').textContent) === 4, "Admin stats show 4 games");
 
   // Verify Champion spotlight
   const champHtml = adminDocMock.getElementById('champion-card').innerHTML;

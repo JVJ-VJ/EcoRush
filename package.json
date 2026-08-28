@@ -1,0 +1,23 @@
+{
+  "name": "eco-rush",
+  "version": "1.0.0",
+  "description": "ECO RUSH — Interactive Environmental Web Game & Multi-Device Live Leaderboard Event Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_e2e_real_flow.js && node test_suite_v2.js && node test_multi_device.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "eco-rush",
+    "environmental-game",
+    "event-platform",
+    "live-leaderboard",
+    "sse",
+    "real-time"
+  ],
+  "author": "Eco Rush Team",
+  "license": "MIT"
+}
