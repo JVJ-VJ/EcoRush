@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+  <title>🌍 ECO RUSH — Save the Planet</title>
+  <meta name="description" content="Play ECO RUSH: an interactive, high-energy environmental quiz game to save the planet, learn eco-habits, and compete on the leaderboard!">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <!-- HOME SCREEN -->
+    <section id="home">
+      <div class="center">
+        <h1>🌍 ECO RUSH</h1>
+        <div class="sub">🌱 SAVE THE PLANET • PLAY • LEARN • COMPETE</div>
+      </div>
+      <div class="card center">
+        <h2>👤 Player Registration</h2>
+        <input id="name" type="text" placeholder="Name" autocomplete="name" required>
+        <input id="team" type="text" placeholder="Team" required>
+        <input id="age" type="number" placeholder="Age" min="1" max="120" required>
+        <button type="button" onclick="startGame()">🚀 START ECO RUSH</button>
+      </div>
+      <div class="center">
+        <button type="button" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
+        <p class="small">40 questions • 5 rounds • 20 seconds each</p>
+      </div>
+    </section>
+
+    <!-- GAME SCREEN -->
+    <section id="game" class="hidden">
+      <div class="stats">
+        <span>🌍 ECO RUSH</span>
+        <span>⭐ <b id="score">0</b> &nbsp; 🔥 <b id="combo">0</b></span>
+      </div>
+      <div class="progress" aria-label="Game progress">
+        <div class="bar" id="bar"></div>
+      </div>
+      <div class="card center">
+        <div id="round" class="sub"></div>
+        <h2 id="roundName"></h2>
+        <div class="small" id="qnum"></div>
+        <h2 id="question"></h2>
+        <div class="timer">⏱️ <span id="timer">20</span></div>
+        <div id="options"></div>
+      </div>
+    </section>
+
+    <!-- RESULT SCREEN -->
+    <section id="result" class="hidden">
+      <div class="card center">
+        <h1 id="resultTitle"></h1>
+        <p id="resultMsg"></p>
+        <h2>⭐ Total Score: <span id="resultScore"></span></h2>
+        <button type="button" onclick="nextQuestion()">🚀 CONTINUE</button>
+      </div>
+    </section>
+
+    <!-- FINISH SCREEN -->
+    <section id="finish" class="hidden">
+      <div class="card center">
+        <div style="font-size:60px">🎉🌍</div>
+        <h1>PLANET SAVED!</h1>
+        <h2 id="finalPlayer"></h2>
+        <div class="sub">⭐ FINAL SCORE</div>
+        <div style="font-size:48px;color:#ffe9a6;font-weight:800;margin:10px 0;" id="finalScore"></div>
+        <div class="badge" id="badge"></div>
+        <button type="button" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
+        <button type="button" onclick="home()">🏠 HOME</button>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD SCREEN -->
+    <section id="leaderboard" class="hidden">
+      <div class="card">
+        <h1 class="center">🏆 LEADERBOARD</h1>
+        <div id="scores"></div>
+        <button type="button" onclick="home()">🏠 HOME</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
