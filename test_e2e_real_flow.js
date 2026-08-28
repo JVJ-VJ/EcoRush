@@ -25,6 +25,7 @@ if (fs.existsSync(DB_FILE)) {
 
 // Start Real Server
 const server = require('./server.js');
+const ACTUAL_PORT = server.address() ? server.address().port : TEST_PORT;
 
 console.log("==========================================================");
 console.log("   ECO RUSH END-TO-END REAL RUNTIME PIPELINE TEST         ");
@@ -90,7 +91,7 @@ class NodeEventSourceMock {
     const parsedUrl = new URL(url);
     this.req = http.request({
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || TEST_PORT,
+      port: parsedUrl.port || ACTUAL_PORT,
       path: parsedUrl.pathname,
       method: 'GET',
       headers: { 'Accept': 'text/event-stream' }
@@ -139,7 +140,7 @@ async function runEndToEnd() {
     const adminSessionStore = {};
     const adminSandbox = {
       window: {
-        location: { protocol: 'http:', origin: `http://localhost:${TEST_PORT}` },
+        location: { protocol: 'http:', origin: `http://localhost:${ACTUAL_PORT}` },
         sessionStorage: {
           getItem: (k) => adminSessionStore[k] || null,
           setItem: (k, v) => { adminSessionStore[k] = String(v); },
@@ -200,7 +201,7 @@ async function runEndToEnd() {
 
     const player1Sandbox = {
       window: {
-        location: { protocol: 'http:', origin: `http://localhost:${TEST_PORT}` },
+        location: { protocol: 'http:', origin: `http://localhost:${ACTUAL_PORT}` },
         localStorage: { getItem: () => null, setItem: () => {} },
         fetch: global.fetch || require('undici').fetch,
         document: player1Doc,
@@ -278,7 +279,7 @@ async function runEndToEnd() {
 
     const player2Sandbox = {
       window: {
-        location: { protocol: 'http:', origin: `http://localhost:${TEST_PORT}` },
+        location: { protocol: 'http:', origin: `http://localhost:${ACTUAL_PORT}` },
         localStorage: { getItem: () => null, setItem: () => {} },
         fetch: global.fetch || require('undici').fetch,
         document: player2Doc,

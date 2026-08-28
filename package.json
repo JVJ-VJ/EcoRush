@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test_e2e_real_flow.js && node test_suite_v2.js && node test_multi_device.js"
+    "test": "node test_admin_reset.js && node test_live_progress.js && node test_e2e_real_flow.js && node test_suite_v2.js && node test_multi_device.js"
   },
   "engines": {
     "node": ">=18.0.0"

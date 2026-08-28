@@ -1,7 +1,7 @@
 /**
  * ECO RUSH — Client-Server Storage & Real-Time Sync Module
  * Communicates with the central backend server (REST API + SSE Stream).
- * Preserves exact badge formulas, sanitization, and fallback storage.
+ * Preserves exact badge formulas, sanitization, and live progress reporting.
  */
 
 const EcoStorage = (function() {
@@ -17,7 +17,7 @@ const EcoStorage = (function() {
   }
 
   /**
-   * Fetch current leaderboard and stats from the central server
+   * Fetch current leaderboard, stats, and live players from the central server
    */
   async function fetchLeaderboard() {
     const url = getApiUrl("/api/leaderboard");
@@ -48,8 +48,26 @@ const EcoStorage = (function() {
           status: "OFFLINE",
           champion: fallbackScores.length > 0 ? fallbackScores[0] : null
         },
-        champion: fallbackScores.length > 0 ? fallbackScores[0] : null
+        champion: fallbackScores.length > 0 ? fallbackScores[0] : null,
+        livePlayers: []
       };
+    }
+  }
+
+  /**
+   * Report live active gameplay progress to the central server
+   */
+  async function updateLiveProgress(progressData) {
+    if (!progressData || !progressData.sessionId || !progressData.name) return;
+    const url = getApiUrl("/api/player/progress");
+    try {
+      await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(progressData)
+      });
+    } catch (e) {
+      // Non-blocking: background update should not interrupt gameplay
     }
   }
 
@@ -66,7 +84,8 @@ const EcoStorage = (function() {
       team: String(entry.team || "").trim(),
       age: Number(entry.age) || 0,
       score: Number(entry.score) || 0,
-      badge: String(entry.badge || "")
+      badge: String(entry.badge || ""),
+      sessionId: String(entry.sessionId || "")
     };
 
     // Save to local cache
@@ -93,7 +112,33 @@ const EcoStorage = (function() {
   }
 
   /**
-   * Subscribe to live SSE leaderboard updates across all connected devices
+   * Admin Reset Leaderboard via Server API
+   */
+  async function resetLeaderboard(password) {
+    const url = getApiUrl("/api/admin/reset-leaderboard");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ password: String(password || "") })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Invalid reset password");
+    }
+
+    // Clear local cache
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    } catch (e) {}
+
+    return data;
+  }
+
+  /**
+   * Subscribe to live SSE leaderboard & live player updates across all connected devices
    */
   function subscribeLiveUpdates(onUpdate) {
     if (typeof EventSource === "undefined") {
@@ -117,7 +162,7 @@ const EcoStorage = (function() {
         source.onmessage = function(event) {
           try {
             const data = JSON.parse(event.data);
-            console.log("[ADMIN] Leaderboard update received:", data);
+            console.log("[ADMIN] Leaderboard/Progress update received:", data);
             if (typeof onUpdate === "function") {
               onUpdate(data);
             }
@@ -224,14 +269,18 @@ const EcoStorage = (function() {
   return {
     STORAGE_KEY,
     fetchLeaderboard,
+    updateLiveProgress,
     submitScore,
+    resetLeaderboard,
     subscribeLiveUpdates,
     getScoresLocal,
     getScores: getScoresLocal,
     saveScoreLocal,
     saveScore: saveScoreLocal,
     getStats: getStatsLocal,
+    getStatsLocal: getStatsLocal,
     getChampion: getChampionLocal,
+    getChampionLocal: getChampionLocal,
     calculateBadge,
     esc
   };

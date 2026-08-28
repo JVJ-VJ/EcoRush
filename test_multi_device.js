@@ -24,6 +24,7 @@ if (fs.existsSync(DB_FILE)) {
 
 // Require server
 const server = require('./server.js');
+const ACTUAL_PORT = server.address() ? server.address().port : TEST_PORT;
 
 console.log("==========================================================");
 console.log("   ECO RUSH MULTI-DEVICE & SERVER SSE VERIFICATION SUITE  ");
@@ -99,7 +100,7 @@ async function runTests() {
     console.log("--- 1. Initial Empty State & No Fake Data ---");
     const initialRes = await request({
       hostname: 'localhost',
-      port: TEST_PORT,
+      port: ACTUAL_PORT,
       path: '/api/leaderboard',
       method: 'GET'
     });
@@ -113,7 +114,7 @@ async function runTests() {
 
     // 2. CONNECT ADMIN TO LIVE SSE STREAM
     console.log("\n--- 2. Connect Admin Device via SSE Stream ---");
-    const adminSse = await openSseConnection(TEST_PORT);
+    const adminSse = await openSseConnection(ACTUAL_PORT);
     // Wait small tick for initial snapshot
     await new Promise(r => setTimeout(r, 200));
     assert(adminSse.messages.length >= 1, "Admin received initial SSE snapshot");
@@ -123,7 +124,7 @@ async function runTests() {
     console.log("\n--- 3. Player Device 1 Submits Score (Alex - 460 pts) ---");
     const player1Res = await request({
       hostname: 'localhost',
-      port: TEST_PORT,
+      port: ACTUAL_PORT,
       path: '/api/leaderboard',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -153,7 +154,7 @@ async function runTests() {
     console.log("\n--- 4. Player Device 2 Submits Score (Jenil - 490 pts) ---");
     const player2Res = await request({
       hostname: 'localhost',
-      port: TEST_PORT,
+      port: ACTUAL_PORT,
       path: '/api/leaderboard',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -181,7 +182,7 @@ async function runTests() {
     console.log("\n--- 5. Player Device 3 Submits Score (Rahul - 370 pts) ---");
     await request({
       hostname: 'localhost',
-      port: TEST_PORT,
+      port: ACTUAL_PORT,
       path: '/api/leaderboard',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -209,7 +210,7 @@ async function runTests() {
     console.log("\n--- 7. Invalid Payload Rejection ---");
     const badRes = await request({
       hostname: 'localhost',
-      port: TEST_PORT,
+      port: ACTUAL_PORT,
       path: '/api/leaderboard',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }

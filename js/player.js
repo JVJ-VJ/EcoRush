@@ -1,10 +1,11 @@
 /**
  * ECO RUSH — Player Game Engine
  * Preserves 100% of the game logic, scoring, progression, timers, and question flow.
- * Submits final score to the shared event backend upon completing all 40 questions.
+ * Reports real-time live player progress and submits final score to shared event backend.
  */
 
 (function() {
+  let sessionId = "";
   let player = "";
   let team = "";
   let age = 0;
@@ -28,12 +29,33 @@
     if (el) el.classList.remove("hidden");
   }
 
+  function sendLiveProgress(status = "PLAYING") {
+    if (!player || !sessionId) return;
+    if (status === "PLAYING" && (isSubmitted || isSubmitting || ri >= 5)) return;
+    EcoStorage.updateLiveProgress({
+      sessionId: sessionId,
+      name: player,
+      team: team,
+      age: age,
+      currentRound: ri + 1,
+      currentQuestion: qi + 1,
+      roundName: (typeof rounds !== "undefined" && rounds[ri]) ? rounds[ri] : `Round ${ri + 1}`,
+      score: score,
+      combo: combo,
+      status: status
+    });
+  }
+
   function home() {
     clearInterval(timer);
     timer = null;
     locked = false;
     isSubmitting = false;
     isSubmitted = false;
+    if (sessionId) {
+      sendLiveProgress("LEFT");
+      sessionId = "";
+    }
     showScreen("home-screen");
   }
 
@@ -51,12 +73,17 @@
       return;
     }
 
+    sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
     ri = 0;
     qi = 0;
     score = 0;
     combo = 0;
     isSubmitting = false;
     isSubmitted = false;
+
+    // Report active player session to live event monitoring
+    sendLiveProgress("PLAYING");
+
     showQuestion();
   }
 
@@ -140,6 +167,9 @@
       combo = 0;
     }
 
+    // Broadcast real-time score and combo update to Admin
+    sendLiveProgress("PLAYING");
+
     const resultTitleEl = document.getElementById("resultTitle");
     const resultMsgEl = document.getElementById("resultMsg");
     const resultScoreEl = document.getElementById("resultScore");
@@ -172,6 +202,7 @@
     if (ri >= 5) {
       finish();
     } else {
+      sendLiveProgress("PLAYING");
       showQuestion();
     }
   }
@@ -193,7 +224,10 @@
     if (finalScoreEl) finalScoreEl.textContent = score;
     if (badgeEl) badgeEl.textContent = badge;
 
-    // Trigger score submission to shared backend
+    // Send completed live progress state to remove from Live Players
+    sendLiveProgress("COMPLETED");
+
+    // Trigger score submission to shared backend (removes active live session & persists)
     await handleScoreSubmission(badge);
   }
 
@@ -213,7 +247,8 @@
         team: team,
         age: age,
         score: score,
-        badge: badge
+        badge: badge,
+        sessionId: sessionId
       });
 
       console.log("[ECO RUSH] Leaderboard submission response:", response);
@@ -306,5 +341,5 @@
   window.home = home;
 
   // Export game state getters for tests
-  window._getPlayerState = () => ({ player, team, age, ri, qi, score, combo, time, locked, isSubmitted });
+  window._getPlayerState = () => ({ sessionId, player, team, age, ri, qi, score, combo, time, locked, isSubmitted });
 })();

@@ -86,10 +86,26 @@
       <!-- Current Champion Spotlight -->
       <div id="champion-card" class="champion-card"></div>
 
-      <!-- Live Leaderboard Panel -->
+      <!-- 🟢 LIVE PLAYERS IN PROGRESS PANEL -->
+      <div class="glass-card live-players-panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+          <div>
+            <h2 style="display: flex; align-items: center; gap: 8px; margin: 0;">
+              <span class="live-pulse-icon"></span> 🟢 LIVE PLAYERS
+            </h2>
+            <span class="text-muted" style="font-size: 13px;">Real-time gameplay progress</span>
+          </div>
+          <div id="live-players-count-badge" class="live-count-pill">0 Playing Now</div>
+        </div>
+
+        <!-- Live Players Container -->
+        <div id="admin-live-players"></div>
+      </div>
+
+      <!-- Completed Leaderboard Panel -->
       <div class="glass-card" style="padding: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h2>🏆 LIVE LEADERBOARD</h2>
+          <h2>🏆 COMPLETED LEADERBOARD</h2>
           <span class="text-muted" style="font-size: 13px;">Auto-synced in real-time</span>
         </div>
 
@@ -112,7 +128,50 @@
         <div id="admin-scores"></div>
       </div>
 
+      <!-- ⚠️ Event Controls / Danger Zone -->
+      <div class="glass-card danger-zone-card" style="padding: 20px; margin-top: 24px;">
+        <div class="danger-zone-header">
+          <div>
+            <h3 style="margin: 0; color: #ff7675; font-size: 16px; display: flex; align-items: center; gap: 6px;">
+              ⚠️ EVENT CONTROLS & DANGER ZONE
+            </h3>
+            <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
+              Resetting will permanently clear all completed leaderboard scores on the server while keeping active players running.
+            </p>
+          </div>
+          <button id="btn-open-reset-modal" class="btn-danger" type="button" onclick="openResetModal()">
+            🗑️ RESET LEADERBOARD
+          </button>
+        </div>
+      </div>
+
     </section>
+
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-modal" class="modal-backdrop hidden">
+      <div class="modal-card glass-card">
+        <div class="modal-icon">⚠️</div>
+        <h3>RESET LEADERBOARD</h3>
+        <p class="modal-desc">
+          This will permanently remove all completed leaderboard results from the server database.<br>
+          <strong>This action cannot be undone.</strong>
+        </p>
+        
+        <div class="form-group" style="margin: 16px 0;">
+          <label for="reset-password-input" class="modal-label">Enter Admin Reset Password:</label>
+          <input id="reset-password-input" class="form-input" type="password" placeholder="••••••••" maxlength="32" onkeydown="if(event.key==='Enter') submitResetLeaderboard()">
+          <div id="reset-error" class="error-text"></div>
+        </div>
+
+        <div class="modal-btn-row">
+          <button class="btn-secondary" type="button" onclick="closeResetModal()">CANCEL</button>
+          <button id="btn-confirm-reset" class="btn-danger" type="button" onclick="submitResetLeaderboard()">RESET</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="admin-toast" class="admin-toast hidden"></div>
 
   </div>
 

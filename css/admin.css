@@ -375,3 +375,294 @@
     align-items: stretch;
   }
 }
+
+/* ==========================================================================
+   Live Players in Progress Styles
+   ========================================================================== */
+
+.live-players-panel {
+  border-color: rgba(46, 204, 113, 0.35);
+  background: rgba(12, 32, 23, 0.85);
+}
+
+.live-pulse-icon {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--primary-neon);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--primary-neon);
+  animation: livePulseAnim 1.4s infinite;
+}
+
+@keyframes livePulseAnim {
+  0% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 4px var(--primary-neon); }
+  50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 14px var(--primary-neon); }
+  100% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 4px var(--primary-neon); }
+}
+
+.live-count-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-sub);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.live-count-pill.active-pulse {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: var(--primary-neon);
+  color: var(--primary-neon);
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.3);
+}
+
+.live-empty-state {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--text-muted);
+}
+
+.live-empty-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+.live-table thead th {
+  background: rgba(7, 21, 14, 0.75);
+}
+
+.live-player-row {
+  transition: background 0.2s ease;
+}
+
+.live-player-row:hover td {
+  background: rgba(46, 204, 113, 0.08);
+}
+
+.round-badge {
+  display: inline-block;
+  background: rgba(52, 152, 219, 0.2);
+  border: 1px solid rgba(52, 152, 219, 0.4);
+  color: #74b9ff;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.round-subtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.live-q-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.mini-progress-bar {
+  width: 100%;
+  max-width: 120px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3498db, var(--primary-neon));
+  transition: width 0.3s ease;
+}
+
+.progress-subtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.combo-live-tag {
+  background: rgba(230, 126, 34, 0.2);
+  border: 1px solid rgba(230, 126, 34, 0.4);
+  color: #ff9f43;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.badge-live-pulse {
+  background: rgba(46, 204, 113, 0.18);
+  border: 1px solid var(--primary-neon);
+  color: var(--primary-neon);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.25);
+}
+
+/* ==========================================================================
+   Danger Zone & Leaderboard Reset Modal Styles
+   ========================================================================== */
+
+.danger-zone-card {
+  border-color: rgba(255, 82, 82, 0.3);
+  background: rgba(30, 15, 15, 0.85);
+}
+
+.danger-zone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ff5252, #d63031);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(214, 48, 49, 0.4);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff7675, #e74c3c);
+  box-shadow: 0 6px 20px rgba(214, 48, 49, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Modal Backdrop & Card */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-backdrop.hidden {
+  display: none;
+}
+
+.modal-card {
+  max-width: 460px;
+  width: 100%;
+  padding: 30px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 82, 82, 0.2);
+  animation: modalPopAnim 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalPopAnim {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.modal-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.modal-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Toast Notifications */
+.admin-toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(16, 42, 30, 0.95);
+  border: 1.5px solid var(--primary-neon);
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(46, 204, 113, 0.3);
+  z-index: 10000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.admin-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.admin-toast.hidden {
+  display: none;
+}

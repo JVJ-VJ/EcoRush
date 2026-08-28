@@ -26,7 +26,11 @@ function assert(condition, message) {
 
 // 1. DATA AUDIT: Check exact match of BANK between eco_rush_web-1.html and js/questions.js
 console.log("--- 1. Question Bank Integrity Audit ---");
-const originalSource = fs.readFileSync(path.join(__dirname, 'eco_rush_web-1.html'), 'utf8');
+let srcPath = path.join(__dirname, 'eco_rush_web-1.html');
+if (!fs.existsSync(srcPath)) {
+  srcPath = 'C:\\Users\\jenil\\Downloads\\eco_rush_web-1.html';
+}
+const originalSource = fs.existsSync(srcPath) ? fs.readFileSync(srcPath, 'utf8') : '';
 const originalBankMatch = originalSource.match(/const BANK=(\{.*?\});\s*const rounds/s);
 const originalBank = eval('(' + originalBankMatch[1] + ')');
 

@@ -1,7 +1,7 @@
 /**
  * ECO RUSH — Admin Control Center & Live Event Dashboard
  * Connects to central backend with real-time Server-Sent Events (SSE) synchronization.
- * Updates instantly when any player device submits a completed game.
+ * Monitors both active live players in progress and completed leaderboard rankings.
  */
 
 (function() {
@@ -11,6 +11,7 @@
   let activeFilter = "ALL";
   let searchQuery = "";
   let currentScores = [];
+  let currentLivePlayers = [];
   let currentStats = { totalGames: 0, uniquePlayers: 0, topScore: 0, status: "LIVE" };
   let currentChampion = null;
   let sseSubscription = null;
@@ -78,9 +79,10 @@
 
   async function loadInitialData() {
     try {
-      console.log("[ADMIN] Loading leaderboard...");
+      console.log("[ADMIN] Loading leaderboard and live players...");
       const data = await EcoStorage.fetchLeaderboard();
       currentScores = data.allScores || data.scores || [];
+      currentLivePlayers = data.livePlayers || [];
       currentStats = data.stats || { totalGames: 0, uniquePlayers: 0, topScore: 0, status: "LIVE" };
       currentChampion = data.champion || null;
       renderAll();
@@ -92,12 +94,15 @@
   function handleLiveUpdate(payload) {
     if (!payload) return;
 
-    console.log("[ADMIN] Leaderboard update received:", payload);
+    console.log("[ADMIN] Real-time update received:", payload);
 
     if (payload.allScores) {
       currentScores = payload.allScores;
     } else if (payload.scores) {
       currentScores = payload.scores;
+    }
+    if (payload.livePlayers !== undefined) {
+      currentLivePlayers = payload.livePlayers;
     }
     if (payload.stats) {
       currentStats = payload.stats;
@@ -113,6 +118,7 @@
     if (!isAuthenticated) return;
     renderMetrics();
     renderChampion();
+    renderLivePlayers();
     renderLeaderboard();
   }
 
@@ -161,6 +167,86 @@
     `;
   }
 
+  /**
+   * Render Active Players in Progress (Real-Time Live State)
+   */
+  function renderLivePlayers() {
+    const container = document.getElementById("admin-live-players");
+    const countBadge = document.getElementById("live-players-count-badge");
+    if (!container) return;
+
+    const count = currentLivePlayers.length;
+    if (countBadge) {
+      countBadge.textContent = count === 1 ? "1 Playing Now" : `${count} Playing Now`;
+      countBadge.className = count > 0 ? "live-count-pill active-pulse" : "live-count-pill";
+    }
+
+    if (!count) {
+      container.innerHTML = `
+        <div class="live-empty-state">
+          <div class="live-empty-icon">🎮</div>
+          <p>No players currently in a game.<br><span class="text-muted" style="font-size: 13px;">When players join and answer questions, their real-time progress will appear here!</span></p>
+        </div>
+      `;
+      return;
+    }
+
+    const rows = currentLivePlayers.map(p => {
+      const roundNum = p.currentRound || 1;
+      const qNum = p.currentQuestion || 1;
+      const overallProgress = Math.min(40, ((roundNum - 1) * 8 + qNum));
+      const percent = Math.round((overallProgress / 40) * 100);
+
+      return `
+        <tr class="live-player-row">
+          <td class="player-cell">
+            <strong>${EcoStorage.esc(p.name)}</strong>
+            <span class="text-muted" style="font-size: 12px; margin-left: 4px;">(Age ${p.age || "N/A"})</span>
+          </td>
+          <td class="team-cell">${EcoStorage.esc(p.team)}</td>
+          <td class="round-cell">
+            <span class="round-badge">Round ${roundNum}/5</span>
+            <div class="round-subtext">${EcoStorage.esc(p.roundName || "")}</div>
+          </td>
+          <td class="q-progress-cell">
+            <div class="live-q-badge">Question ${qNum}/8</div>
+            <div class="mini-progress-bar">
+              <div class="mini-progress-fill" style="width: ${percent}%"></div>
+            </div>
+            <span class="progress-subtext">${overallProgress}/40 (${percent}%)</span>
+          </td>
+          <td class="score-cell"><strong>${Number(p.score) || 0} ⭐</strong></td>
+          <td class="combo-cell">${Number(p.combo) > 0 ? `<span class="combo-live-tag">🔥 ${p.combo}</span>` : `<span class="text-muted">-</span>`}</td>
+          <td class="status-cell"><span class="badge-live-pulse">🟢 PLAYING</span></td>
+        </tr>
+      `;
+    }).join("");
+
+    container.innerHTML = `
+      <div class="table-responsive">
+        <table class="leader live-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Team</th>
+              <th>Round</th>
+              <th>Progress</th>
+              <th>Live Score</th>
+              <th>Combo</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /**
+   * Render Completed Leaderboard
+   */
   function renderLeaderboard() {
     const scoresContainer = document.getElementById("admin-scores");
     if (!scoresContainer) return;
@@ -169,8 +255,8 @@
       scoresContainer.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🏆</div>
-          <h3>NO PLAYERS YET</h3>
-          <p>The live leaderboard will populate automatically when players finish ECO RUSH.</p>
+          <h3>NO COMPLETED GAMES YET</h3>
+          <p>Completed player scores will appear here automatically when participants finish all 40 questions.</p>
         </div>
       `;
       return;
@@ -270,10 +356,108 @@
     showPinScreen();
   }
 
+  // Reset Leaderboard Modal Handling
+  let isResetting = false;
+
+  function openResetModal() {
+    const modal = document.getElementById("reset-modal");
+    const pwdInput = document.getElementById("reset-password-input");
+    const errorEl = document.getElementById("reset-error");
+    if (errorEl) errorEl.textContent = "";
+    if (pwdInput) {
+      pwdInput.value = "";
+      pwdInput.disabled = false;
+    }
+    const resetBtn = document.getElementById("btn-confirm-reset");
+    if (resetBtn) {
+      resetBtn.disabled = false;
+      resetBtn.textContent = "RESET";
+    }
+    if (modal) modal.classList.remove("hidden");
+    if (pwdInput) setTimeout(() => pwdInput.focus(), 100);
+  }
+
+  function closeResetModal() {
+    if (isResetting) return;
+    const modal = document.getElementById("reset-modal");
+    if (modal) modal.classList.add("hidden");
+    const pwdInput = document.getElementById("reset-password-input");
+    if (pwdInput) pwdInput.value = "";
+    const errorEl = document.getElementById("reset-error");
+    if (errorEl) errorEl.textContent = "";
+  }
+
+  async function submitResetLeaderboard() {
+    if (isResetting) return;
+
+    const pwdInput = document.getElementById("reset-password-input");
+    const errorEl = document.getElementById("reset-error");
+    const resetBtn = document.getElementById("btn-confirm-reset");
+    const entered = pwdInput ? pwdInput.value.trim() : "";
+
+    if (!entered) {
+      if (errorEl) errorEl.textContent = "Please enter the reset password.";
+      if (pwdInput) pwdInput.focus();
+      return;
+    }
+
+    isResetting = true;
+    if (errorEl) errorEl.textContent = "";
+    if (resetBtn) {
+      resetBtn.disabled = true;
+      resetBtn.textContent = "Resetting...";
+    }
+    if (pwdInput) pwdInput.disabled = true;
+
+    try {
+      const res = await EcoStorage.resetLeaderboard(entered);
+      console.log("[ADMIN] Leaderboard reset result:", res);
+
+      // Close modal on success
+      isResetting = false;
+      closeResetModal();
+
+      // Show temporary confirmation toast
+      showToast("✅ LEADERBOARD RESET — All completed results have been cleared.");
+
+      // Refresh data from server
+      await loadInitialData();
+    } catch (err) {
+      console.error("[ADMIN] Leaderboard reset failed:", err);
+      isResetting = false;
+      if (resetBtn) {
+        resetBtn.disabled = false;
+        resetBtn.textContent = "RESET";
+      }
+      if (pwdInput) {
+        pwdInput.disabled = false;
+        pwdInput.focus();
+      }
+      if (errorEl) {
+        errorEl.textContent = "❌ INVALID PASSWORD";
+      }
+    }
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("admin-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.remove("hidden");
+    toast.classList.add("visible");
+    setTimeout(() => {
+      toast.classList.remove("visible");
+      setTimeout(() => toast.classList.add("hidden"), 300);
+    }, 4000);
+  }
+
   window.verifyPin = verifyPin;
   window.setFilter = setFilter;
   window.manualRefresh = manualRefresh;
   window.logout = logout;
+  window.openResetModal = openResetModal;
+  window.closeResetModal = closeResetModal;
+  window.submitResetLeaderboard = submitResetLeaderboard;
   window.renderDashboard = renderAll;
 
   if (document.readyState === "loading") {

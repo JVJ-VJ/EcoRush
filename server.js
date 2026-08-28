@@ -4,6 +4,7 @@
  * Features:
  *  - Persistent File-Backed Database (data/scores.json)
  *  - Real-Time Server-Sent Events (SSE) Broadcast for Cross-Device Synchronization
+ *  - In-Memory Live Active Player Progress Tracking (POST /api/player/progress)
  *  - REST API for Leaderboard & Stats
  *  - LAN IP Discovery for Mobile Event Access
  */
@@ -14,6 +15,7 @@ const path = require('path');
 const os = require('os');
 
 const PORT = Number(process.env.PORT) || 3000;
+const RESET_PASSWORD = process.env.ECO_RUSH_RESET_PASSWORD || "NSS2026";
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'scores.json');
 
@@ -24,6 +26,21 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // Active SSE client connections
 const sseClients = new Set();
+
+// Active player game sessions (Live progress tracking in memory)
+const activeSessions = new Map();
+
+/**
+ * Clean up sessions that have been inactive for over 2 minutes
+ */
+function cleanupInactiveSessions() {
+  const now = Date.now();
+  for (const [id, session] of activeSessions.entries()) {
+    if (now - (session.lastActive || now) > 120000) {
+      activeSessions.delete(id);
+    }
+  }
+}
 
 /**
  * Read scores safely from disk
@@ -49,9 +66,15 @@ function writeScores(scores) {
   try {
     const sorted = [...scores].sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
     const top100 = sorted.slice(0, 100);
-    const tempFile = DB_FILE + '.tmp';
-    fs.writeFileSync(tempFile, JSON.stringify(top100, null, 2), 'utf8');
-    fs.renameSync(tempFile, DB_FILE);
+    const content = JSON.stringify(top100, null, 2);
+    try {
+      const tempFile = DB_FILE + '.' + Date.now() + '.tmp';
+      fs.writeFileSync(tempFile, content, 'utf8');
+      fs.renameSync(tempFile, DB_FILE);
+    } catch (renameErr) {
+      // Direct write fallback for Windows file locking
+      fs.writeFileSync(DB_FILE, content, 'utf8');
+    }
     return top100;
   } catch (e) {
     console.error('[SERVER] Error saving scores database:', e);
@@ -80,8 +103,11 @@ function calculateStats(scores) {
  * Broadcast payload to all connected SSE clients (Admin dashboards, displays)
  */
 function broadcastLeaderboard() {
+  cleanupInactiveSessions();
   const scores = readScores();
   const stats = calculateStats(scores);
+  const livePlayers = Array.from(activeSessions.values());
+
   const payload = JSON.stringify({
     type: "LEADERBOARD_UPDATE",
     timestamp: Date.now(),
@@ -89,10 +115,11 @@ function broadcastLeaderboard() {
     allScores: scores,
     allScoresCount: scores.length,
     stats: stats,
-    champion: stats.champion
+    champion: stats.champion,
+    livePlayers: livePlayers
   });
 
-  console.log(`[SERVER] Broadcasting leaderboard update: ${scores.length} scores to ${sseClients.size} SSE client(s)`);
+  console.log(`[SERVER] Broadcasting update: ${scores.length} scores, ${livePlayers.length} live players to ${sseClients.size} SSE client(s)`);
 
   const message = `event: message\ndata: ${payload}\n\n`;
 
@@ -153,20 +180,82 @@ const server = http.createServer((req, res) => {
 
   // 1. API: GET /api/leaderboard
   if (req.method === 'GET' && urlPath === '/api/leaderboard') {
+    cleanupInactiveSessions();
     const scores = readScores();
     const stats = calculateStats(scores);
+    const livePlayers = Array.from(activeSessions.values());
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       success: true,
       scores: scores.slice(0, 20),
       allScores: scores,
       stats: stats,
-      champion: stats.champion
+      champion: stats.champion,
+      livePlayers: livePlayers
     }));
     return;
   }
 
-  // 2. API: POST /api/leaderboard
+  // 2. API: POST /api/player/progress (Live player active session tracking)
+  if (req.method === 'POST' && urlPath === '/api/player/progress') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body || '{}');
+        const sessionId = String(data.sessionId || '').trim();
+        const name = String(data.name || '').trim();
+        const team = String(data.team || '').trim();
+        const age = Number(data.age) || 0;
+        const currentRound = Number(data.currentRound) || 1;
+        const currentQuestion = Number(data.currentQuestion) || 1;
+        const roundName = String(data.roundName || '').trim();
+        const score = Number(data.score) || 0;
+        const combo = Number(data.combo) || 0;
+        const status = String(data.status || 'PLAYING').trim();
+
+        if (!sessionId || !name) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'sessionId and name are required' }));
+          return;
+        }
+
+        if (status === 'COMPLETED' || status === 'LEFT') {
+          activeSessions.delete(sessionId);
+        } else {
+          activeSessions.set(sessionId, {
+            sessionId: sessionId,
+            name: name,
+            team: team,
+            age: age,
+            currentRound: currentRound,
+            currentQuestion: currentQuestion,
+            roundName: roundName,
+            score: score,
+            combo: combo,
+            status: "PLAYING",
+            lastActive: Date.now()
+          });
+        }
+
+        // Broadcast live progress immediately to all connected Admin dashboards
+        broadcastLeaderboard();
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          livePlayers: Array.from(activeSessions.values())
+        }));
+      } catch (err) {
+        console.error('[SERVER] Failed to process POST /api/player/progress:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Internal Server Error' }));
+      }
+    });
+    return;
+  }
+
+  // 3. API: POST /api/leaderboard (Completed game submission)
   if (req.method === 'POST' && urlPath === '/api/leaderboard') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -178,13 +267,26 @@ const server = http.createServer((req, res) => {
         const age = Number(data.age) || 0;
         const score = Number(data.score);
         const badge = String(data.badge || '').trim();
+        const sessionId = String(data.sessionId || '').trim();
 
-        console.log(`[SERVER] Leaderboard submission received: Name="${name}", Team="${team}", Score=${score}, Badge="${badge}"`);
+        console.log(`[SERVER] Completed game received: Name="${name}", Team="${team}", Score=${score}, Badge="${badge}"`);
 
         if (!name || !team || isNaN(score)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: 'Invalid score submission payload' }));
           return;
+        }
+
+        // Remove active live session on game completion
+        if (sessionId && activeSessions.has(sessionId)) {
+          activeSessions.delete(sessionId);
+        } else {
+          // Fallback: purge any session with matching name and team
+          for (const [id, s] of activeSessions.entries()) {
+            if (s.name.toLowerCase() === name.toLowerCase() && s.team.toLowerCase() === team.toLowerCase()) {
+              activeSessions.delete(id);
+            }
+          }
         }
 
         const newEntry = {
@@ -222,7 +324,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. API: GET /api/leaderboard/stream (Server-Sent Events)
+  // 4. API: POST /api/admin/reset-leaderboard (Admin Leaderboard Reset)
+  if (req.method === 'POST' && urlPath === '/api/admin/reset-leaderboard') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body || '{}');
+        const password = String(data.password || '');
+
+        if (password !== RESET_PASSWORD) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Invalid reset password' }));
+          return;
+        }
+
+        // Clear completed leaderboard data on server disk
+        writeScores([]);
+        console.log('[ECO RUSH] Leaderboard reset by admin');
+
+        // Broadcast reset leaderboard immediately via SSE to all connected admin clients
+        broadcastLeaderboard();
+
+        const stats = calculateStats([]);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: 'Leaderboard reset successfully',
+          stats: stats
+        }));
+      } catch (err) {
+        console.error('[SERVER] Failed to process POST /api/admin/reset-leaderboard:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Internal Server Error' }));
+      }
+    });
+    return;
+  }
+
+  // 5. API: GET /api/leaderboard/stream (Server-Sent Events)
   if (req.method === 'GET' && urlPath === '/api/leaderboard/stream') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -235,9 +375,12 @@ const server = http.createServer((req, res) => {
     sseClients.add(res);
     console.log(`[SERVER] SSE client connected (Total active SSE clients: ${sseClients.size})`);
 
-    // Send immediate initial snapshot
+    // Send immediate initial snapshot including both completed scores and live active players
+    cleanupInactiveSessions();
     const scores = readScores();
     const stats = calculateStats(scores);
+    const livePlayers = Array.from(activeSessions.values());
+
     const initialPayload = JSON.stringify({
       type: "INITIAL_SNAPSHOT",
       timestamp: Date.now(),
@@ -245,7 +388,8 @@ const server = http.createServer((req, res) => {
       allScores: scores,
       allScoresCount: scores.length,
       stats: stats,
-      champion: stats.champion
+      champion: stats.champion,
+      livePlayers: livePlayers
     });
     res.write(`event: message\ndata: ${initialPayload}\n\n`);
 
@@ -256,7 +400,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. Static File Routing
+  // 5. Static File Routing
   let filePath = '';
   if (urlPath === '/' || urlPath === '/player') {
     filePath = path.join(__dirname, 'player.html');
@@ -290,8 +434,9 @@ const server = http.createServer((req, res) => {
   });
 });
 
-// Periodic SSE Keepalive Heartbeat every 15s
+// Periodic SSE Keepalive Heartbeat every 15s & Session Cleanup
 const keepaliveInterval = setInterval(() => {
+  cleanupInactiveSessions();
   for (const client of sseClients) {
     try {
       client.write(': keepalive\n\n');
